@@ -916,36 +916,48 @@ export const MainViewport: React.FC = () => {
               </div>
             )}
 
-            {/* Empty Library State */}
-            {tracks.length === 0 ? (
-              <div className="my-12 max-w-md mx-auto text-center py-6">
-                <div className="flex flex-wrap items-center justify-center gap-3">
-                  <button
-                    onClick={() => void pickNativeAudioFiles()}
-                    className="bg-white hover:bg-white/90 text-black font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-all cursor-pointer shadow-md"
-                  >
-                    <FileAudio size={16} />
-                    <span>Open Files</span>
-                  </button>
-                  <button
-                    onClick={() => void pickNativeAudioFolder()}
-                    className="bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <FolderOpen size={16} />
-                    <span>Open Folder</span>
-                  </button>
-                  <button
-                    onClick={() => createPlaylist()}
-                    className="border border-white/20 hover:border-white text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-colors cursor-pointer"
-                  >
-                    <Plus size={16} />
-                    <span>Create Playlist</span>
-                  </button>
-                </div>
+            {/* Empty Library State Card */}
+            {tracks.length === 0 && (
+              <div className="my-8 max-w-xl mx-auto">
+                <SpotlightCard className="bg-[#181818]/90 border border-white/10 rounded-2xl p-6 sm:p-8 text-center shadow-2xl relative overflow-hidden backdrop-blur-md">
+                  <div className="w-14 h-14 rounded-full bg-spotify-green/15 text-spotify-green flex items-center justify-center mx-auto mb-3">
+                    <Music size={28} />
+                  </div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Build Your Music Library</h3>
+                  <p className="text-xs sm:text-sm text-spotify-muted mb-6 max-w-md mx-auto leading-relaxed">
+                    Import audio files or music folders from your computer to enjoy seamless offline listening, lyrics, and live audio visualizers.
+                  </p>
+                  <div className="flex flex-wrap items-center justify-center gap-3">
+                    <button
+                      onClick={() => void pickNativeAudioFiles()}
+                      className="bg-white hover:bg-white/90 text-black font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-transform hover:scale-105 cursor-pointer shadow-md"
+                    >
+                      <FileAudio size={16} />
+                      <span>Open Files</span>
+                    </button>
+                    <button
+                      onClick={() => void pickNativeAudioFolder()}
+                      className="bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <FolderOpen size={16} />
+                      <span>Open Folder</span>
+                    </button>
+                    <button
+                      onClick={() => createPlaylist()}
+                      className="border border-white/20 hover:border-white text-white font-bold text-sm px-6 py-2.5 rounded-full inline-flex items-center gap-2 transition-colors cursor-pointer"
+                    >
+                      <Plus size={16} />
+                      <span>Create Playlist</span>
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-white/40 mt-4">
+                    Or drag & drop audio files (.mp3, .flac, .wav, .m4a) anywhere into the window
+                  </p>
+                </SpotlightCard>
               </div>
-            ) : (
-              <>
-                {/* Your Custom Playlists Shelf */}
+            )}
+
+            {/* Your Custom Playlists Shelf */}
                 {(() => {
                   const shelfPlaylists =
                     homeFilter === 'playlists'
@@ -1226,8 +1238,6 @@ export const MainViewport: React.FC = () => {
                     </div>
                   </section>
                 )}
-              </>
-            )}
           </div>
         )}
         </div>

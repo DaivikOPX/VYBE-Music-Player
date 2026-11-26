@@ -1,0 +1,102 @@
+{
+  "name": "spotify-clone",
+  "private": true,
+  "version": "1.0.0",
+  "description": "VYBE - Offline-first high-fidelity music player with acrylic glass aesthetic",
+  "author": "VYBE Team",
+  "type": "module",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "desktop": "npm run build && electron .",
+    "desktop:build": "npm run build && electron-builder --win dir",
+    "desktop:portable": "npm run build && electron-builder --win portable",
+    "android:sync": "npm run build && npx cap sync android"
+  },
+  "build": {
+    "appId": "com.localplayer.spotifyclone",
+    "productName": "VYBE",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "build/**/*"
+    ],
+    "win": {
+      "icon": "build/icon.ico",
+      "target": [
+        "dir",
+        "portable",
+        "nsis"
+      ]
+    },
+    "fileAssociations": [
+      {
+        "ext": "mp3",
+        "name": "MP3 Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "flac",
+        "name": "FLAC Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "wav",
+        "name": "WAV Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "m4a",
+        "name": "M4A Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "aac",
+        "name": "AAC Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "ogg",
+        "name": "OGG Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "opus",
+        "name": "OPUS Audio",
+        "role": "Viewer"
+      },
+      {
+        "ext": "aiff",
+        "name": "AIFF Audio",
+        "role": "Viewer"
+      }
+    ]
+  },
+  "dependencies": {
+    "@capacitor/app": "^8.1.1",
+    "@capacitor/core": "^8.3.0",
+    "lucide-react": "^1.16.0",
+    "music-metadata": "^12.8.4",
+    "node-id3": "^0.2.9",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/android": "^8.3.0",
+    "@capacitor/cli": "^8.3.0",
+    "@tailwindcss/vite": "^4.2.2",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0",
+    "tailwindcss": "^4.2.2",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7"
+  }
+}

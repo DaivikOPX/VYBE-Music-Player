@@ -1,0 +1,365 @@
+@import "tailwindcss";
+
+@font-face {
+  font-family: 'CircularSp';
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Book.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularSp';
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Medium.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularSp';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularSp';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Black.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularSpTitle';
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Bold.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'CircularSpTitle';
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+  src: url('/fonts/CircularStd-Black.woff2') format('woff2');
+}
+
+@theme {
+  --color-spotify-green: #1ed760;
+  --color-spotify-green-base: #1db954;
+  --color-spotify-green-hover: #3be477;
+  --color-spotify-green-press: #1abc54;
+  --color-spotify-base: #000000;
+  --color-spotify-surface: #121212;
+  --color-spotify-highlight: #1f1f1f;
+  --color-spotify-elevated: #242424;
+  --color-spotify-elevated-hover: #2a2a2a;
+  --color-spotify-card: #181818;
+  --color-spotify-card-hover: #282828;
+  --color-spotify-text: #ffffff;
+  --color-spotify-muted: #b3b3b3;
+  --color-spotify-subtle: #7c7c7c;
+  --font-sans: 'CircularSp', 'CircularStd', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-title: 'CircularSpTitle', 'CircularSp', 'CircularStd', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+@layer base {
+  *, ::before, ::after {
+    font-family: var(--font-sans);
+  }
+  html, body, #root {
+    height: 100%;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #000000;
+    color: #ffffff;
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
+}
+
+/* Electron frameless window dragging */
+.app-drag {
+  -webkit-app-region: drag;
+}
+.app-no-drag {
+  -webkit-app-region: no-drag;
+}
+
+/* Mobile safe-area utilities for Android APK */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Custom Spotify Scrollbars */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background-color: hsla(0, 0%, 100%, 0.2);
+  border-radius: 9999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: hsla(0, 0%, 100%, 0.42);
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+/* Equalizer animations */
+@keyframes eq-bar-1 { 0%, 100% { height: 4px; } 50% { height: 14px; } }
+@keyframes eq-bar-2 { 0%, 100% { height: 12px; } 45% { height: 5px; } 80% { height: 14px; } }
+@keyframes eq-bar-3 { 0%, 100% { height: 6px; } 35% { height: 14px; } 70% { height: 4px; } }
+@keyframes eq-bar-4 { 0%, 100% { height: 10px; } 55% { height: 3px; } 85% { height: 13px; } }
+
+.animate-eq-1 { animation: eq-bar-1 0.8s ease-in-out infinite; }
+.animate-eq-2 { animation: eq-bar-2 0.65s ease-in-out infinite; }
+.animate-eq-3 { animation: eq-bar-3 0.9s ease-in-out infinite; }
+.animate-eq-4 { animation: eq-bar-4 0.72s ease-in-out infinite; }
+
+/* ReactBits animations */
+@keyframes rb-shine {
+  0% { background-position: 100%; }
+  100% { background-position: -100%; }
+}
+.animate-rb-shine {
+  animation: rb-shine 4.5s linear infinite;
+}
+
+@keyframes rb-gradient {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+}
+
+@keyframes rb-aurora-float-1 {
+  0%, 100% { transform: translate(0%, 0%) scale(1); }
+  50% { transform: translate(12%, 8%) scale(1.14); }
+}
+@keyframes rb-aurora-float-2 {
+  0%, 100% { transform: translate(0%, 0%) scale(1.05); }
+  50% { transform: translate(-14%, -6%) scale(0.92); }
+}
+.animate-rb-aurora-1 { animation: rb-aurora-float-1 14s ease-in-out infinite; }
+.animate-rb-aurora-2 { animation: rb-aurora-float-2 18s ease-in-out infinite; }
+
+@keyframes rb-star-movement-bottom {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(-100%, 0%); opacity: 0; }
+}
+@keyframes rb-star-movement-top {
+  0% { transform: translate(0%, 0%); opacity: 1; }
+  100% { transform: translate(100%, 0%); opacity: 0; }
+}
+.animate-star-bottom { animation: rb-star-movement-bottom linear infinite alternate; }
+.animate-star-top { animation: rb-star-movement-top linear infinite alternate; }
+
+/* View, Modal, Sheet & Toast fluid motion */
+@keyframes ui-view-enter {
+  0% { opacity: 0; transform: translateY(8px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-view-enter {
+  animation: ui-view-enter 220ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ui-pop-in {
+  0% { opacity: 0; transform: scale(0.95) translateY(6px); }
+  100% { opacity: 1; transform: scale(1) translateY(0); }
+}
+.animate-pop-in {
+  animation: ui-pop-in 170ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes ui-sheet-up {
+  0% { opacity: 0; transform: translateY(28px); }
+  100% { opacity: 1; transform: translateY(0); }
+}
+.animate-sheet-up {
+  animation: ui-sheet-up 260ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes ui-toast-in {
+  0% { opacity: 0; transform: translate(-50%, 14px) scale(0.96); }
+  100% { opacity: 1; transform: translate(-50%, 0) scale(1); }
+}
+.animate-toast-in {
+  animation: ui-toast-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-view-enter,
+  .animate-pop-in,
+  .animate-sheet-up,
+  .animate-toast-in,
+  .animate-rb-shine,
+  .animate-rb-aurora-1,
+  .animate-rb-aurora-2 {
+    animation: none !important;
+    transition: none !important;
+  }
+}
+
+/* Light Mode Theme Overrides */
+html.light-theme {
+  --color-spotify-base: #f2f3f5;
+  --color-spotify-surface: #ffffff;
+  --color-spotify-highlight: #e5e7eb;
+  --color-spotify-elevated: #e8eaed;
+  --color-spotify-elevated-hover: #dfe3e8;
+  --color-spotify-card: #f4f5f7;
+  --color-spotify-card-hover: #e8eaef;
+  --color-spotify-text: #111827;
+  --color-spotify-muted: #4b5563;
+  --color-spotify-subtle: #6b7280;
+}
+
+html.light-theme,
+html.light-theme body,
+html.light-theme #root {
+  background-color: #f2f3f5;
+  color: #111827;
+}
+
+html.light-theme .bg-black {
+  background-color: #f2f3f5 !important;
+}
+
+html.light-theme .bg-\[\#121212\],
+html.light-theme .bg-\[\#181818\] {
+  background-color: #ffffff !important;
+}
+
+html.light-theme .bg-\[\#1f1f1f\],
+html.light-theme .bg-\[\#242424\],
+html.light-theme .bg-\[\#282828\] {
+  background-color: #e9ecf0 !important;
+}
+
+html.light-theme .text-white {
+  color: #111827 !important;
+}
+
+html.light-theme .border-white\/10,
+html.light-theme .border-white\/15 {
+  border-color: rgba(17, 24, 39, 0.12) !important;
+}
+
+.reduce-motion .animate-view-enter,
+.reduce-motion .animate-pop-in,
+.reduce-motion .animate-sheet-up,
+.reduce-motion .animate-toast-in,
+.reduce-motion .animate-rb-shine,
+.reduce-motion .animate-rb-aurora-1,
+.reduce-motion .animate-rb-aurora-2 {
+  animation: none !important;
+  transition: none !important;
+}
+
+/* ==========================================================================
+   Hazy Transparent Theme (Spicetify Hazy Inspired)
+   ========================================================================== */
+html.hazy-theme {
+  --color-spotify-base: transparent;
+  --color-spotify-surface: var(--hazy-panel-bg, rgba(18, 18, 24, 0.35));
+  --color-spotify-card: var(--hazy-card-bg, rgba(28, 28, 36, 0.25));
+  --color-spotify-card-hover: rgba(45, 45, 60, 0.45);
+  --color-spotify-highlight: rgba(255, 255, 255, 0.08);
+  --color-spotify-elevated: var(--hazy-panel-bg, rgba(22, 22, 30, 0.45));
+  --color-spotify-elevated-hover: rgba(36, 36, 48, 0.55);
+}
+
+html.hazy-theme,
+html.hazy-theme body,
+html.hazy-theme #root {
+  background-color: transparent !important;
+}
+
+/* Translucent acrylic surfaces with dynamic custom blur & transparency */
+html.hazy-theme .bg-black {
+  background-color: var(--hazy-panel-bg, rgba(10, 10, 14, 0.35)) !important;
+  backdrop-filter: blur(var(--hazy-panel-blur, 20px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--hazy-panel-blur, 20px)) saturate(180%) !important;
+}
+
+html.hazy-theme .bg-\[\#121212\] {
+  background-color: var(--hazy-panel-bg, rgba(14, 14, 20, 0.35)) !important;
+  backdrop-filter: blur(var(--hazy-panel-blur, 20px)) saturate(175%) !important;
+  -webkit-backdrop-filter: blur(var(--hazy-panel-blur, 20px)) saturate(175%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.hazy-theme .bg-\[\#181818\] {
+  background-color: var(--hazy-panel-bg, rgba(24, 24, 32, 0.30)) !important;
+  backdrop-filter: blur(var(--hazy-panel-blur, 16px)) saturate(160%) !important;
+  -webkit-backdrop-filter: blur(var(--hazy-panel-blur, 16px)) saturate(160%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.08) !important;
+}
+
+html.hazy-theme .bg-\[\#181818\]:hover {
+  background-color: rgba(38, 38, 52, 0.48) !important;
+  border-color: rgba(255, 255, 255, 0.16) !important;
+}
+
+html.hazy-theme .bg-\[\#1f1f1f\] {
+  background-color: rgba(30, 30, 42, 0.38) !important;
+  backdrop-filter: blur(var(--hazy-panel-blur, 16px)) !important;
+  -webkit-backdrop-filter: blur(var(--hazy-panel-blur, 16px)) !important;
+}
+
+html.hazy-theme .bg-\[\#242424\],
+html.hazy-theme .bg-\[\#282828\] {
+  background-color: rgba(32, 32, 44, 0.45) !important;
+  backdrop-filter: blur(var(--hazy-panel-blur, 18px)) saturate(180%) !important;
+  -webkit-backdrop-filter: blur(var(--hazy-panel-blur, 18px)) saturate(180%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.10) !important;
+}
+
+/* Glassmorphic border glow */
+html.hazy-theme .border-white\/10 {
+  border-color: rgba(255, 255, 255, 0.12) !important;
+}
+
+/* Glass Utility Classes */
+.hazy-glass-panel {
+  background: rgba(14, 14, 20, 0.45);
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+}
+
+.hazy-glass-card {
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.hazy-glass-card:hover {
+  background: rgba(255, 255, 255, 0.10);
+  border-color: rgba(255, 255, 255, 0.18);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px -10px rgba(0, 0, 0, 0.5);
+}

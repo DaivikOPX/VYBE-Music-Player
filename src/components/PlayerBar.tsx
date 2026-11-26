@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { ChevronUp, Check, Laptop, Music, Sliders, Timer } from 'lucide-react';
+import { ChevronUp, Check, Laptop, Music, Sliders, Timer, Maximize2 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { CONNECT_DEVICES } from '../data/mockData';
 import { AudioToolsPopover } from './AudioToolsPopover';
@@ -255,20 +255,30 @@ export const PlayerBar: React.FC = () => {
         <div className="flex items-center gap-3.5 w-[30%] min-w-[180px]">
           {currentTrack ? (
             <>
-              <div className="relative w-14 h-14 shrink-0 group rounded overflow-hidden bg-[#282828] flex items-center justify-center">
+              <div
+                onClick={() => setIsTheaterMode(true)}
+                title="Open Theater Mode (F)"
+                className="relative w-14 h-14 shrink-0 group rounded overflow-hidden bg-[#282828] flex items-center justify-center cursor-pointer shadow-md"
+              >
                 {currentTrack.coverUrl ? (
                   <img
                     src={currentTrack.coverUrl}
                     alt={currentTrack.title}
-                    className="w-14 h-14 object-cover"
+                    className="w-14 h-14 object-cover group-hover:scale-105 transition-transform"
                   />
                 ) : (
                   <Music size={22} className="text-spotify-muted" />
                 )}
+                <div className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                  <Maximize2 size={18} className="text-white drop-shadow" />
+                </div>
                 <button
-                  onClick={() => toggleRightDrawer('nowPlaying')}
+                  onClick={e => {
+                    e.stopPropagation();
+                    toggleRightDrawer('nowPlaying');
+                  }}
                   title={isNowPlayingOpen ? 'Collapse Now Playing view' : 'Expand Now Playing view'}
-                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/75 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:scale-105 transition-all cursor-pointer"
+                  className="absolute top-1 right-1 w-6 h-6 rounded-full bg-black/75 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 hover:scale-105 transition-all cursor-pointer z-10"
                 >
                   <ChevronUp size={15} className={isNowPlayingOpen ? 'rotate-180' : ''} />
                 </button>

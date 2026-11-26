@@ -13,6 +13,7 @@ import {
   Clock,
   BookmarkPlus,
   Moon,
+  Maximize2,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { CheckCircleIcon, PlusCircleIcon, Play16Icon } from './SpotifyIcons';
@@ -85,6 +86,7 @@ export const RightDrawer: React.FC = () => {
     sleepRemainingSec,
     navigate,
     settings,
+    setIsTheaterMode,
   } = usePlayer();
 
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
@@ -274,6 +276,15 @@ export const RightDrawer: React.FC = () => {
                   {isLiked ? <CheckCircleIcon size={20} /> : <PlusCircleIcon size={20} />}
                 </button>
               </div>
+
+              {/* One-click Theater Mode Launch Button */}
+              <button
+                onClick={() => setIsTheaterMode(true)}
+                className="w-full py-2 px-3 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold flex items-center justify-center gap-2 cursor-pointer transition-colors border border-white/10 shadow-sm"
+              >
+                <Maximize2 size={13} className="text-spotify-green" />
+                <span>Open in Theater Mode (F)</span>
+              </button>
 
               {nextUpTrack && (
                 <SpotlightCard className="bg-[#1f1f1f] rounded-lg p-4">

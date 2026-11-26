@@ -679,6 +679,20 @@ export const TopNav: React.FC = () => {
         )}
 
         <button
+          onClick={() => {
+            if (!currentTrack && tracks.length > 0) {
+              playTrack(tracks[0], tracks, null);
+            }
+            setIsTheaterMode(true);
+          }}
+          title="Theater Mode & Visualizer (F)"
+          className="px-2.5 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white hover:text-spotify-green hover:scale-104 transition-all cursor-pointer border border-white/10"
+        >
+          <Sparkles size={14} className="text-spotify-green" />
+          <span className="hidden sm:inline">Theater Mode</span>
+        </button>
+
+        <button
           onClick={() => void pickNativeAudioFolder()}
           title="Import Music Folder"
           className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#1f1f1f] hover:scale-105 transition-all cursor-pointer"

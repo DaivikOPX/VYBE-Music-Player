@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Minimize2, ChevronDown, Music, Upload, Sliders, Keyboard, Plus, BarChart3, FolderOpen, FileAudio, Trash2, ArrowUp, ArrowDown, Shuffle, ArrowUpDown, Moon, BookmarkPlus, Mic2 } from 'lucide-react';
+import { X, Minimize2, ChevronDown, Music, Upload, Sliders, Keyboard, Plus, BarChart3, FolderOpen, FileAudio, Trash2, ArrowUp, ArrowDown, Shuffle, ArrowUpDown, Moon, BookmarkPlus, Mic2, Sparkles } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
@@ -570,6 +570,16 @@ const SpotifyShell: React.FC = () => {
                 title="Audio & Playback Tools"
               >
                 <Sliders size={20} />
+              </button>
+              <button
+                onClick={() => {
+                  setIsMobilePlayerOpen(false);
+                  setIsTheaterMode(true);
+                }}
+                className="p-2 text-white/85 hover:text-spotify-green transition-colors cursor-pointer"
+                title="Open Theater Mode"
+              >
+                <Sparkles size={20} className="text-spotify-green" />
               </button>
             </div>
           </div>

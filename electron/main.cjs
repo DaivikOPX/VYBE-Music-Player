@@ -318,7 +318,7 @@ async function parseAudioFileMeta(filePath) {
 }
 
 function collectAudioFilesRecursive(dirPath, acc = [], seen = new Set(), depth = 0) {
-  if (depth > 6 || acc.length >= 2500) return acc;
+  if (depth > 12 || acc.length >= 25000) return acc;
   let entries = [];
   try {
     entries = fs.readdirSync(dirPath, { withFileTypes: true });
@@ -695,13 +695,20 @@ app.whenReady().then(() => {
   ipcMain.handle('dialog:pickAudioFolder', async () => {
     const res = await dialog.showOpenDialog(mainWindow, {
       title: 'Select Music Folder',
-      properties: ['openDirectory']
+      buttonLabel: 'Select Folder',
+      properties: ['openDirectory', 'multiSelections']
     });
     if (res.canceled || res.filePaths.length === 0) return null;
-    const folderPath = path.resolve(res.filePaths[0]);
-    const files = collectAudioFilesRecursive(folderPath);
+    const seen = new Set();
+    const files = [];
+    const folderPaths = [];
+    for (const fp of res.filePaths) {
+      const folderPath = path.resolve(fp);
+      folderPaths.push(folderPath);
+      collectAudioFilesRecursive(folderPath, files, seen);
+    }
     const items = await parseManyFiles(files);
-    return { folderPath, items };
+    return { folderPath: folderPaths[0], folderPaths, items };
   });
 
   ipcMain.handle('dialog:scanWatchedFolders', async (_e, folders) => {

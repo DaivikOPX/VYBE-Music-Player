@@ -2494,10 +2494,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       try {
         const res = await window.electronAPI.pickAudioFolder();
         if (res) {
-          setWatchedFolders(prev => (prev.includes(res.folderPath) ? prev : [...prev, res.folderPath]));
+          const newPaths = (res as any).folderPaths && (res as any).folderPaths.length > 0
+            ? (res as any).folderPaths
+            : [res.folderPath];
+          setWatchedFolders(prev => Array.from(new Set([...prev, ...newPaths])));
           if (res.items.length > 0) {
             const mapped = await mapNativeItemsToTracks(res.items);
             await addLocalTracksToLibrary(mapped);
+            showToast(`Imported ${res.items.length} track(s)`);
           } else {
             showToast('Folder watched (no audio files found yet)');
           }

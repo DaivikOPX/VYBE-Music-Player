@@ -20,6 +20,7 @@ import {
   Grid2X2,
   Folder,
   Edit2,
+  FileAudio,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -59,6 +60,8 @@ export const Sidebar: React.FC = () => {
     togglePinPlaylist,
     addTrackToPlaylist,
     importM3uPlaylist,
+    pickNativeAudioFolder,
+    pickNativeAudioFiles,
     settings,
   } = usePlayer();
   const m3uInputRef = useRef<HTMLInputElement>(null);
@@ -402,6 +405,40 @@ export const Sidebar: React.FC = () => {
 
                       <button
                         onClick={() => {
+                          void pickNativeAudioFolder();
+                          setCreateMenuOpen(false);
+                        }}
+                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <FolderOpen size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[14px] text-white">Import Music Folder</p>
+                          <p className="text-[12px] text-spotify-muted">Scan an entire music folder from your PC</p>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          void pickNativeAudioFiles();
+                          setCreateMenuOpen(false);
+                        }}
+                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <FileAudio size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[14px] text-white">Import Audio Files</p>
+                          <p className="text-[12px] text-spotify-muted">Select specific tracks</p>
+                        </div>
+                      </button>
+
+                      <div className="my-1 border-t border-white/10" />
+
+                      <button
+                        onClick={() => {
                           createFolder();
                           setCreateMenuOpen(false);
                         }}
@@ -411,7 +448,7 @@ export const Sidebar: React.FC = () => {
                           <CreateFolderMenuIcon size={20} />
                         </div>
                         <div>
-                          <p className="font-bold text-[14px] text-white">Folder</p>
+                          <p className="font-bold text-[14px] text-white">Playlist Folder</p>
                           <p className="text-[12px] text-spotify-muted">Organize your playlists</p>
                         </div>
                       </button>

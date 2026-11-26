@@ -10,8 +10,6 @@ import {
   User,
   Check,
   FolderOpen,
-  FileAudio,
-  Keyboard,
   RefreshCw,
   Loader2,
   Sparkles,
@@ -63,6 +61,7 @@ export const TopNav: React.FC = () => {
   } = usePlayer();
 
   const [menuOpen, setMenuOpen] = useState<'app' | 'profile' | 'hazy' | null>(null);
+  const [activeSubmenu, setActiveSubmenu] = useState<'file' | 'edit' | 'view' | 'playback' | 'help' | null>(null);
   const [isMaximized, setIsMaximized] = useState(false);
   const navRef = useRef<HTMLDivElement>(null);
 
@@ -70,6 +69,7 @@ export const TopNav: React.FC = () => {
     const onClickOutside = (e: MouseEvent) => {
       if (navRef.current && !navRef.current.contains(e.target as Node)) {
         setMenuOpen(null);
+        setActiveSubmenu(null);
       }
     };
     window.addEventListener('mousedown', onClickOutside);
@@ -131,124 +131,390 @@ export const TopNav: React.FC = () => {
           </button>
 
           {menuOpen === 'app' && (
-            <div className="absolute left-0 top-10 w-64 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1.5 text-sm text-white z-50">
-              <button
-                onClick={() => {
-                  void pickNativeAudioFiles();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+            <div
+              className="absolute left-0 top-10 w-48 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50 select-none animate-in fade-in duration-100"
+              onMouseLeave={() => setActiveSubmenu(null)}
+            >
+              {/* File */}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveSubmenu('file')}
               >
-                <FileAudio size={15} className="text-spotify-muted" />
-                <span>Open Audio Files...</span>
-              </button>
-              <button
-                onClick={() => {
-                  void pickNativeAudioFolder();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
-              >
-                <FolderOpen size={15} className="text-spotify-muted" />
-                <span>Open Music Folder...</span>
-              </button>
-              {watchedFolders.length > 0 && (
                 <button
-                  onClick={() => {
-                    void rescanWatchedFolders();
-                    setMenuOpen(null);
-                  }}
-                  className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer"
+                  onClick={() => setActiveSubmenu(activeSubmenu === 'file' ? null : 'file')}
+                  className={`w-full px-3.5 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                    activeSubmenu === 'file' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-[#d1d1d1]'
+                  }`}
                 >
-                  <RefreshCw size={15} className="text-spotify-green" />
-                  <span>Rescan Watched Folders</span>
+                  <span className="font-normal">File</span>
+                  <ChevronRight size={14} className="text-white/60" />
                 </button>
-              )}
-              <div className="my-1 border-t border-white/10" />
-              <button
-                onClick={() => {
-                  togglePlay();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
+
+                {activeSubmenu === 'file' && (
+                  <div className="absolute left-full top-0 ml-1 w-56 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                    <button
+                      onClick={() => {
+                        void pickNativeAudioFiles();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Open Audio Files...</span>
+                      <span className="text-[11px] text-white/40">Ctrl+O</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        void pickNativeAudioFolder();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Open Music Folder...</span>
+                      <span className="text-[11px] text-white/40">Ctrl+Shift+O</span>
+                    </button>
+                    {watchedFolders.length > 0 && (
+                      <button
+                        onClick={() => {
+                          void rescanWatchedFolders();
+                          setMenuOpen(null);
+                          setActiveSubmenu(null);
+                        }}
+                        className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-spotify-green hover:brightness-110"
+                      >
+                        <span>Rescan Folders</span>
+                        <RefreshCw size={13} />
+                      </button>
+                    )}
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        navigate({ name: 'home' });
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>New Playlist</span>
+                      <span className="text-[11px] text-white/40">Ctrl+N</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        handleClose();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Close</span>
+                      <span className="text-[11px] text-white/40">Alt+F4</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Edit */}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveSubmenu('edit')}
               >
-                <span>{isPlaying ? 'Pause' : 'Play'}</span>
-                <span className="text-xs text-spotify-muted">Space</span>
-              </button>
-              <button
-                onClick={() => {
-                  toggleShuffle();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                <button
+                  onClick={() => setActiveSubmenu(activeSubmenu === 'edit' ? null : 'edit')}
+                  className={`w-full px-3.5 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                    activeSubmenu === 'edit' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-[#d1d1d1]'
+                  }`}
+                >
+                  <span className="font-normal">Edit</span>
+                  <ChevronRight size={14} className="text-white/60" />
+                </button>
+
+                {activeSubmenu === 'edit' && (
+                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                    <button
+                      onClick={() => {
+                        document.execCommand('undo');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Undo</span>
+                      <span className="text-[11px] text-white/40">Ctrl+Z</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        document.execCommand('redo');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Redo</span>
+                      <span className="text-[11px] text-white/40">Ctrl+Y</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        document.execCommand('cut');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Cut</span>
+                      <span className="text-[11px] text-white/40">Ctrl+X</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        document.execCommand('copy');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Copy</span>
+                      <span className="text-[11px] text-white/40">Ctrl+C</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        document.execCommand('paste');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Paste</span>
+                      <span className="text-[11px] text-white/40">Ctrl+V</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        navigate({ name: 'settings' });
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Preferences...</span>
+                      <span className="text-[11px] text-white/40">Ctrl+P</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* View */}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveSubmenu('view')}
               >
-                <span>Shuffle</span>
-                {isShuffle && <Check size={14} className="text-spotify-green" />}
-              </button>
-              <button
-                onClick={() => {
-                  cycleRepeat();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                <button
+                  onClick={() => setActiveSubmenu(activeSubmenu === 'view' ? null : 'view')}
+                  className={`w-full px-3.5 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                    activeSubmenu === 'view' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-[#d1d1d1]'
+                  }`}
+                >
+                  <span className="font-normal">View</span>
+                  <ChevronRight size={14} className="text-white/60" />
+                </button>
+
+                {activeSubmenu === 'view' && (
+                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                    <button
+                      onClick={() => {
+                        const cur = settings.zoomLevel || 100;
+                        const next = Math.min(130, cur + 10);
+                        if (next !== cur) {
+                          // update zoom
+                          try {
+                            const root = document.getElementById('root');
+                            if (root) (root.style as any).zoom = `${next}%`;
+                          } catch {}
+                        }
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Zoom In</span>
+                      <span className="text-[11px] text-white/40">Ctrl++</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        const cur = settings.zoomLevel || 100;
+                        const next = Math.max(70, cur - 10);
+                        if (next !== cur) {
+                          try {
+                            const root = document.getElementById('root');
+                            if (root) (root.style as any).zoom = `${next}%`;
+                          } catch {}
+                        }
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Zoom Out</span>
+                      <span className="text-[11px] text-white/40">Ctrl+-</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        try {
+                          const root = document.getElementById('root');
+                          if (root) (root.style as any).zoom = '100%';
+                        } catch {}
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Reset Zoom</span>
+                      <span className="text-[11px] text-white/40">Ctrl+0</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        handleMaximize();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Full Screen</span>
+                      <span className="text-[11px] text-white/40">F11</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        navigate({ name: 'lyrics' });
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Lyrics</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleRightDrawer('queue');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Queue</span>
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Playback */}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveSubmenu('playback')}
               >
-                <span>Repeat ({repeatMode})</span>
-              </button>
-              <div className="my-1 border-t border-white/10" />
-              <button
-                onClick={() => {
-                  navigate({ name: 'stats' });
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
+                <button
+                  onClick={() => setActiveSubmenu(activeSubmenu === 'playback' ? null : 'playback')}
+                  className={`w-full px-3.5 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                    activeSubmenu === 'playback' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-[#d1d1d1]'
+                  }`}
+                >
+                  <span className="font-normal">Playback</span>
+                  <ChevronRight size={14} className="text-white/60" />
+                </button>
+
+                {activeSubmenu === 'playback' && (
+                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                    <button
+                      onClick={() => {
+                        togglePlay();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>{isPlaying ? 'Pause' : 'Play'}</span>
+                      <span className="text-[11px] text-white/40">Space</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        toggleShuffle();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Shuffle</span>
+                      {isShuffle && <Check size={13} className="text-spotify-green" />}
+                    </button>
+                    <button
+                      onClick={() => {
+                        cycleRepeat();
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Repeat ({repeatMode})</span>
+                    </button>
+                    <div className="my-1 border-t border-white/10" />
+                    <button
+                      onClick={() => {
+                        setAmoledMode(!settings.amoledMode);
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>AMOLED Black</span>
+                      {settings.amoledMode && <Check size={13} className="text-spotify-green" />}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              {/* Help */}
+              <div
+                className="relative"
+                onMouseEnter={() => setActiveSubmenu('help')}
               >
-                Listening Stats & Health
-              </button>
-              <button
-                onClick={() => {
-                  navigate({ name: 'lyrics' });
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
-              >
-                Lyrics View
-              </button>
-              <button
-                onClick={() => {
-                  toggleRightDrawer('queue');
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
-              >
-                Queue
-              </button>
-              <button
-                onClick={() => {
-                  setAmoledMode(!settings.amoledMode);
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles size={14} className="text-spotify-muted" />
-                  <span>AMOLED Black</span>
-                </span>
-                {settings.amoledMode && <Check size={14} className="text-spotify-green" />}
-              </button>
-              <div className="my-1 border-t border-white/10" />
-              <button
-                onClick={() => {
-                  setIsShortcutsOpen(true);
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Keyboard size={14} className="text-spotify-muted" />
-                  <span>Keyboard Shortcuts</span>
-                </span>
-                <span className="text-xs text-spotify-muted">?</span>
-              </button>
+                <button
+                  onClick={() => setActiveSubmenu(activeSubmenu === 'help' ? null : 'help')}
+                  className={`w-full px-3.5 py-1.5 text-left flex items-center justify-between cursor-pointer transition-colors ${
+                    activeSubmenu === 'help' ? 'bg-white/15 text-white' : 'hover:bg-white/10 text-[#d1d1d1]'
+                  }`}
+                >
+                  <span className="font-normal">Help</span>
+                  <ChevronRight size={14} className="text-white/60" />
+                </button>
+
+                {activeSubmenu === 'help' && (
+                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                    <button
+                      onClick={() => {
+                        setIsShortcutsOpen(true);
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Keyboard Shortcuts</span>
+                      <span className="text-[11px] text-white/40">?</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        showToast('VYBE Music Player v1.0.0 (Spotify Desktop Clone)');
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>About VYBE</span>
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </div>

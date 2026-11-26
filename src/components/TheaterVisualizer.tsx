@@ -3,18 +3,35 @@ import { usePlayer } from '../context/PlayerContext';
 
 interface TheaterVisualizerProps {
   accentColor?: string;
+  className?: string;
+  height?: number;
 }
 
-export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({ accentColor }) => {
+interface Particle {
+  x: number;
+  y: number;
+  vx: number;
+  vy: number;
+  radius: number;
+  alpha: number;
+  phase: number;
+}
+
+export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({
+  accentColor,
+  className = 'w-full h-20 opacity-95',
+  height = 80,
+}) => {
   const { isPlaying, getFrequencyData, getWaveformData, settings, activeAccentColor } = usePlayer();
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const smoothedRef = useRef<number[]>(new Array(36).fill(0.08));
+  const smoothedRef = useRef<number[]>(new Array(48).fill(0.08));
+  const particlesRef = useRef<Particle[]>([]);
   const style = settings.visualizerStyle || 'bars';
 
   useEffect(() => {
     let raf = 0;
     const bins = new Uint8Array(64);
-    const barCount = 36;
+    const barCount = 40;
     const baseHex =
       settings.dynamicAccentColor !== false
         ? activeAccentColor
@@ -22,12 +39,25 @@ export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({ accentColo
         ? accentColor
         : '#1ed760';
 
+    // Initialize particles for particle visualizer
+    if (particlesRef.current.length === 0) {
+      particlesRef.current = Array.from({ length: 42 }, () => ({
+        x: Math.random() * 800,
+        y: Math.random() * 120,
+        vx: (Math.random() - 0.5) * 0.7,
+        vy: (Math.random() - 0.5) * 0.5,
+        radius: Math.random() * 2.8 + 1.2,
+        alpha: Math.random() * 0.5 + 0.3,
+        phase: Math.random() * Math.PI * 2,
+      }));
+    }
+
     const draw = () => {
       const canvas = canvasRef.current;
       if (canvas) {
         const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const cssW = canvas.clientWidth || 640;
-        const cssH = canvas.clientHeight || 72;
+        const cssH = canvas.clientHeight || height;
         if (canvas.width !== Math.round(cssW * dpr) || canvas.height !== Math.round(cssH * dpr)) {
           canvas.width = Math.round(cssW * dpr);
           canvas.height = Math.round(cssH * dpr);
@@ -42,7 +72,102 @@ export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({ accentColo
           ctx.clearRect(0, 0, w, h);
           const tNow = performance.now() / 1000;
 
-          if (style === 'fluid') {
+          if (style === 'radial') {
+            const hasData = isPlaying && getFrequencyData(bins);
+            const cx = w * 0.5;
+            const cy = h * 0.5;
+            const baseR = Math.min(cx, cy) * 0.45;
+            const maxR = Math.min(cx, cy) * 0.95;
+            const rays = 42;
+
+            for (let i = 0; i < rays; i++) {
+              let target = 0.08;
+              if (isPlaying) {
+                if (hasData) {
+                  const raw = bins[Math.min(bins.length - 1, Math.floor((i / rays) * 24))] / 255;
+                  target = Math.max(0.08, raw);
+                } else {
+                  target = 0.12 + 0.35 * Math.abs(Math.sin(tNow * 3.2 + i * 0.35));
+                }
+              }
+              const cur = smoothedRef.current[i] ?? 0.08;
+              const next = cur + (target - cur) * 0.22;
+              smoothedRef.current[i] = next;
+
+              const angle = (i / rays) * Math.PI * 2 - Math.PI / 2;
+              const r1 = baseR;
+              const r2 = baseR + next * (maxR - baseR);
+
+              const x1 = cx + Math.cos(angle) * r1;
+              const y1 = cy + Math.sin(angle) * r1;
+              const x2 = cx + Math.cos(angle) * r2;
+              const y2 = cy + Math.sin(angle) * r2;
+
+              ctx.beginPath();
+              ctx.moveTo(x1, y1);
+              ctx.lineTo(x2, y2);
+              ctx.strokeStyle = baseHex;
+              ctx.lineWidth = Math.max(2, (Math.PI * 2 * baseR) / (rays * 1.6));
+              ctx.lineCap = 'round';
+              ctx.globalAlpha = 0.45 + next * 0.55;
+              ctx.shadowBlur = next > 0.4 ? 12 : 0;
+              ctx.shadowColor = baseHex;
+              ctx.stroke();
+            }
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+          } else if (style === 'particles') {
+            const hasData = isPlaying && getFrequencyData(bins);
+            let bassEnergy = 0.05;
+            if (isPlaying && hasData) {
+              for (let i = 0; i < 6; i++) bassEnergy += bins[i];
+              bassEnergy = bassEnergy / (6 * 255);
+            } else if (isPlaying) {
+              bassEnergy = 0.22 + 0.18 * Math.sin(tNow * 3);
+            }
+
+            const pts = particlesRef.current;
+            for (let i = 0; i < pts.length; i++) {
+              const p = pts[i];
+              p.x += p.vx * (1 + bassEnergy * 2.2);
+              p.y += p.vy * (1 + bassEnergy * 2.2);
+
+              if (p.x < 0) p.x = w;
+              if (p.x > w) p.x = 0;
+              if (p.y < 0) p.y = h;
+              if (p.y > h) p.y = 0;
+
+              const curR = p.radius * (1 + bassEnergy * 1.5);
+              const curA = Math.min(1, p.alpha * (0.8 + bassEnergy * 1.2));
+
+              ctx.beginPath();
+              ctx.arc(p.x, p.y, curR, 0, Math.PI * 2);
+              ctx.fillStyle = baseHex;
+              ctx.globalAlpha = curA;
+              ctx.shadowBlur = 10;
+              ctx.shadowColor = baseHex;
+              ctx.fill();
+
+              // Connect nearby particles with subtle glowing lines
+              for (let j = i + 1; j < pts.length; j++) {
+                const p2 = pts[j];
+                const dx = p.x - p2.x;
+                const dy = p.y - p2.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < 65) {
+                  ctx.beginPath();
+                  ctx.moveTo(p.x, p.y);
+                  ctx.lineTo(p2.x, p2.y);
+                  ctx.strokeStyle = baseHex;
+                  ctx.globalAlpha = (1 - dist / 65) * 0.25 * (0.5 + bassEnergy);
+                  ctx.lineWidth = 1;
+                  ctx.stroke();
+                }
+              }
+            }
+            ctx.shadowBlur = 0;
+            ctx.globalAlpha = 1;
+          } else if (style === 'fluid') {
             const hasFreq = isPlaying && getFrequencyData(bins);
             let bassEnergy = 0;
             let midEnergy = 0;
@@ -124,14 +249,15 @@ export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({ accentColo
             ctx.stroke();
             ctx.shadowBlur = 0;
           } else {
+            // Classic Equalizer Bars
             const hasData = isPlaying && getFrequencyData(bins);
-            const gap = 5;
+            const gap = 4;
             const barW = Math.max(4, (w - gap * (barCount - 1)) / barCount);
 
             const grad = ctx.createLinearGradient(0, 0, 0, h);
             grad.addColorStop(0, '#ffffff');
             grad.addColorStop(0.25, baseHex);
-            grad.addColorStop(1, `${baseHex}55`);
+            grad.addColorStop(1, `${baseHex}44`);
 
             for (let i = 0; i < barCount; i++) {
               let target = 0.06;
@@ -171,11 +297,11 @@ export const TheaterVisualizer: React.FC<TheaterVisualizerProps> = ({ accentColo
 
     raf = requestAnimationFrame(draw);
     return () => cancelAnimationFrame(raf);
-  }, [isPlaying, getFrequencyData, getWaveformData, accentColor, activeAccentColor, settings.dynamicAccentColor, style]);
+  }, [isPlaying, getFrequencyData, getWaveformData, accentColor, activeAccentColor, settings.dynamicAccentColor, style, height]);
 
   return (
-    <div className="w-full max-w-3xl mx-auto pt-4 pointer-events-none">
-      <canvas ref={canvasRef} width={640} height={72} className="w-full h-16 opacity-95" />
+    <div className="w-full max-w-3xl mx-auto pt-2 pointer-events-none">
+      <canvas ref={canvasRef} width={640} height={height} className={className} />
     </div>
   );
 };

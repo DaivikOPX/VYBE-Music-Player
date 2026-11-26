@@ -1101,7 +1101,7 @@ export const SettingsView: React.FC = () => {
                   </p>
                 </div>
                 <div className="flex flex-wrap items-center gap-1.5">
-                  {(['bars', 'waveform', 'fluid'] as const).map(st => (
+                  {(['bars', 'waveform', 'fluid', 'radial', 'particles'] as const).map(st => (
                     <button
                       key={st}
                       onClick={() => updateAudioSettings({ visualizerStyle: st })}

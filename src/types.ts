@@ -161,7 +161,7 @@ export interface AudioSettings {
   desktopNotifications?: boolean;
   startOnBoot?: boolean;
   globalShortcuts?: boolean;
-  visualizerStyle?: 'bars' | 'waveform' | 'fluid';
+  visualizerStyle?: 'bars' | 'waveform' | 'fluid' | 'radial' | 'particles';
   zoomLevel?: number; // 70 to 130
   lyricsSource?: 'online' | 'local';
   dynamicAccentColor?: boolean;

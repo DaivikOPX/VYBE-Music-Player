@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Minimize2,
   Music,
@@ -11,6 +11,7 @@ import {
   X,
   Trash2,
   Mic2,
+  Layers,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { TheaterVisualizer } from './TheaterVisualizer';
@@ -62,22 +63,10 @@ export const TheaterMode: React.FC = () => {
     getFrequencyData,
   } = usePlayer();
 
-  // Theater Stage Tab & Mode States
-  const [stageMode, setStageMode] = useState<'card' | 'vinyl'>('card');
-  const [theaterTab, setTheaterTab] = useState<'art' | 'lyrics'>('art');
+  // Primary theater presentation mode (Default: 'vinyl')
+  const [viewMode, setViewMode] = useState<'vinyl' | 'card' | 'lyrics'>('vinyl');
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [isAudioFxOpen, setIsAudioFxOpen] = useState(false);
-
-  // Cinema Immersion: Auto-hide controls when idle
-  const [isControlsVisible, setIsControlsVisible] = useState(true);
-  const idleTimerRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Floating Volume Wheel HUD
-  const [volumeHud, setVolumeHud] = useState<{ val: number; visible: boolean }>({
-    val: volume,
-    visible: false,
-  });
-  const volumeHudTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Real-time Bass Transient Energy for Bass-Reactive Spring Bump
   const [bassScale, setBassScale] = useState(1);
@@ -88,7 +77,7 @@ export const TheaterMode: React.FC = () => {
 
   // Active synced lyric index
   const activeLyricIdx = (() => {
-    if (theaterTab !== 'lyrics' || !currentTrack?.lyrics?.length) return -1;
+    if (viewMode !== 'lyrics' || !currentTrack?.lyrics?.length) return -1;
     const lyrics = currentTrack.lyrics;
     const offset = currentTrack.lyricsOffsetSec || 0;
     const effectiveTime = currentTime + offset;
@@ -102,49 +91,10 @@ export const TheaterMode: React.FC = () => {
   })();
 
   useEffect(() => {
-    if (theaterTab === 'lyrics' && activeLyricIdx >= 0) {
+    if (viewMode === 'lyrics' && activeLyricIdx >= 0) {
       activeLyricRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     }
-  }, [theaterTab, activeLyricIdx, currentTrack?.id]);
-
-  // Reset idle timer on any mouse / touch / key interaction
-  const handleUserActivity = useCallback(() => {
-    setIsControlsVisible(true);
-    if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    if (isPlaying) {
-      idleTimerRef.current = setTimeout(() => {
-        // Do not auto-hide if a popover/drawer is open
-        if (!isQueueOpen && !isAudioFxOpen) {
-          setIsControlsVisible(false);
-        }
-      }, 3500);
-    }
-  }, [isPlaying, isQueueOpen, isAudioFxOpen]);
-
-  useEffect(() => {
-    handleUserActivity();
-    return () => {
-      if (idleTimerRef.current) clearTimeout(idleTimerRef.current);
-    };
-  }, [isPlaying, handleUserActivity]);
-
-  // Global mouse-wheel volume adjustment with floating HUD
-  const handleWheel = useCallback(
-    (e: React.WheelEvent) => {
-      handleUserActivity();
-      e.stopPropagation();
-      const delta = e.deltaY < 0 ? 0.05 : -0.05;
-      const nextVol = Math.max(0, Math.min(1, Math.round((volume + delta) * 100) / 100));
-      setVolume(nextVol);
-
-      setVolumeHud({ val: nextVol, visible: true });
-      if (volumeHudTimerRef.current) clearTimeout(volumeHudTimerRef.current);
-      volumeHudTimerRef.current = setTimeout(() => {
-        setVolumeHud(prev => ({ ...prev, visible: false }));
-      }, 1500);
-    },
-    [volume, setVolume, handleUserActivity]
-  );
+  }, [viewMode, activeLyricIdx, currentTrack?.id]);
 
   // Bass-Reactive Audio Spring Bump (reads Web Audio sub-bass frequencies 0-4)
   useEffect(() => {
@@ -158,8 +108,8 @@ export const TheaterMode: React.FC = () => {
             energy += bassBinsRef.current[i];
           }
           const norm = energy / (4 * 255);
-          // Spring scale between 1.00 and 1.035 based on sub-bass punch
-          setBassScale(1 + norm * 0.038);
+          // Spring scale between 1.00 and 1.032 based on sub-bass punch
+          setBassScale(1 + norm * 0.032);
         } else {
           setBassScale(1);
         }
@@ -184,118 +134,82 @@ export const TheaterMode: React.FC = () => {
 
   return (
     <div
-      onMouseMove={handleUserActivity}
-      onMouseDown={handleUserActivity}
-      onKeyDown={handleUserActivity}
-      onWheel={handleWheel}
-      className="fixed inset-0 z-50 flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden"
+      className="fixed inset-0 z-50 flex flex-col justify-between p-5 sm:p-8 md:p-10 select-none overflow-hidden"
       style={{
         background: settings.amoledMode
           ? '#000000'
-          : `radial-gradient(circle at 35% 35%, ${accentHex}33 0%, #08080a 78%)`,
+          : `radial-gradient(circle at 40% 35%, ${accentHex}38 0%, #08080a 78%)`,
       }}
     >
       {/* Background Animated Aurora Glow */}
       {!settings.amoledMode && settings.animationsEnabled !== false && (
         <Aurora
           colorStops={[accentHex, activeAccentColor, '#08080a']}
-          className="opacity-40 pointer-events-none"
+          className="opacity-45 pointer-events-none transition-opacity duration-700"
         />
       )}
 
-      {/* Floating Volume Wheel HUD */}
-      <div
-        className={`fixed top-8 left-1/2 -translate-x-1/2 z-50 transition-all duration-300 pointer-events-none ${
-          volumeHud.visible
-            ? 'opacity-100 translate-y-0 scale-100'
-            : 'opacity-0 -translate-y-4 scale-95'
-        }`}
-      >
-        <div className="bg-black/80 backdrop-blur-xl border border-white/15 px-4 py-2 rounded-full shadow-2xl flex items-center gap-3 text-white">
-          {volumeHud.val === 0 ? (
-            <VolumeX size={18} className="text-red-400" />
-          ) : volumeHud.val < 0.5 ? (
-            <Volume1 size={18} className="text-white" />
-          ) : (
-            <Volume2 size={18} className="text-spotify-green" />
-          )}
-          <div className="w-24 h-1.5 bg-white/20 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-spotify-green rounded-full transition-all duration-100"
-              style={{ width: `${Math.round(volumeHud.val * 100)}%` }}
-            />
+      {/* Top Header Bar (Always visible with buttery microanimations) */}
+      <div className="flex items-center justify-between relative z-20 gap-4">
+        {/* Brand logo & title */}
+        <div className="flex items-center gap-2.5 text-white/90">
+          <div className="w-8 h-8 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-md shadow-inner">
+            <SpotifyLogoIcon size={22} className="text-white" />
           </div>
-          <span className="text-xs font-mono font-bold tabular-nums">
-            {Math.round(volumeHud.val * 100)}%
-          </span>
-        </div>
-      </div>
-
-      {/* Top Header Bar */}
-      <div
-        className={`flex items-center justify-between relative z-20 gap-4 transition-all duration-500 ${
-          isControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-4 pointer-events-none'
-        }`}
-      >
-        <div className="flex items-center gap-2 text-white/85">
-          <SpotifyLogoIcon size={28} className="text-white" />
-          <ShinyText text="Theater Mode" className="font-extrabold text-sm tracking-wider uppercase" />
+          <ShinyText text="Theater Mode" className="font-extrabold text-sm tracking-wider uppercase hidden sm:inline" />
         </div>
 
-        {/* Center Mode Controls: Art vs Lyrics & Vinyl Turntable Toggle */}
-        <div className="flex items-center gap-2">
-          <div className="flex items-center bg-black/45 backdrop-blur-xl p-1 rounded-full border border-white/10 gap-1 text-xs font-semibold shadow-lg">
-            <button
-              onClick={() => setTheaterTab('art')}
-              className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
-                theaterTab === 'art'
-                  ? 'bg-white text-black shadow-md'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              Artwork
-            </button>
-            <button
-              onClick={() => setTheaterTab('lyrics')}
-              className={`px-3 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
-                theaterTab === 'lyrics'
-                  ? 'bg-white text-black shadow-md'
-                  : 'text-white/70 hover:text-white'
-              }`}
-            >
-              <Mic2 size={13} />
-              <span>Lyrics</span>
-            </button>
-          </div>
+        {/* Center Presentation Switcher: Vinyl Turntable vs 3D Album Art vs Lyrics */}
+        <div className="flex items-center bg-black/50 backdrop-blur-2xl p-1 rounded-full border border-white/15 shadow-2xl gap-1 text-xs font-bold">
+          <button
+            onClick={() => setViewMode('vinyl')}
+            className={`px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+              viewMode === 'vinyl'
+                ? 'bg-spotify-green text-black shadow-lg scale-102'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Disc size={14} className={viewMode === 'vinyl' && isPlaying ? 'animate-spin' : ''} />
+            <span>Vinyl</span>
+          </button>
 
-          {theaterTab === 'art' && (
-            <button
-              onClick={() => setStageMode(s => (s === 'card' ? 'vinyl' : 'card'))}
-              title={stageMode === 'vinyl' ? 'Switch to Card view' : 'Switch to Vinyl Turntable view'}
-              className={`px-3 py-1.5 rounded-full border border-white/10 text-xs font-bold flex items-center gap-1.5 cursor-pointer transition-all shadow-md ${
-                stageMode === 'vinyl'
-                  ? 'bg-spotify-green text-black border-spotify-green'
-                  : 'bg-black/45 backdrop-blur-xl text-white/80 hover:text-white hover:border-white/20'
-              }`}
-            >
-              <Disc size={14} className={stageMode === 'vinyl' && isPlaying ? 'animate-spin' : ''} />
-              <span className="hidden sm:inline">Vinyl Mode</span>
-            </button>
-          )}
+          <button
+            onClick={() => setViewMode('card')}
+            className={`px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+              viewMode === 'card'
+                ? 'bg-white text-black shadow-lg scale-102'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Layers size={14} />
+            <span>3D Art</span>
+          </button>
+
+          <button
+            onClick={() => setViewMode('lyrics')}
+            className={`px-3.5 py-1.5 rounded-full transition-all duration-200 cursor-pointer flex items-center gap-1.5 ${
+              viewMode === 'lyrics'
+                ? 'bg-white text-black shadow-lg scale-102'
+                : 'text-white/70 hover:text-white hover:bg-white/10'
+            }`}
+          >
+            <Mic2 size={14} />
+            <span>Lyrics</span>
+          </button>
         </div>
 
         {/* Right Controls: Visualizer Selector, Audio FX, Queue, and Exit */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 sm:gap-2.5">
           {/* Visualizer Style Dropdown/Pills */}
-          <div className="hidden sm:flex items-center bg-black/40 backdrop-blur-md rounded-full p-1 border border-white/10 text-[11px] font-medium text-white/70">
+          <div className="hidden lg:flex items-center bg-black/45 backdrop-blur-md rounded-full p-1 border border-white/10 text-[11px] font-medium text-white/70 shadow-lg">
             {(['bars', 'fluid', 'waveform', 'radial', 'particles'] as const).map(style => (
               <button
                 key={style}
                 onClick={() => updateAudioSettings({ visualizerStyle: style })}
-                className={`px-2.5 py-0.5 rounded-full capitalize transition-all cursor-pointer ${
+                className={`px-2.5 py-0.5 rounded-full capitalize transition-all duration-200 cursor-pointer ${
                   visualizerStyle === style
                     ? 'bg-spotify-green text-black font-bold shadow'
-                    : 'hover:text-white'
+                    : 'hover:text-white hover:bg-white/5'
                 }`}
               >
                 {style}
@@ -310,10 +224,10 @@ export const TheaterMode: React.FC = () => {
               setIsQueueOpen(false);
             }}
             title="Audio Equalizer & Sound Effects"
-            className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all border ${
+            className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-all duration-200 border shadow-lg ${
               isAudioFxOpen
-                ? 'bg-spotify-green text-black border-spotify-green'
-                : 'bg-black/40 hover:bg-white/20 border-white/10 text-white'
+                ? 'bg-spotify-green text-black border-spotify-green scale-105'
+                : 'bg-black/45 hover:bg-white/20 border-white/10 text-white hover:scale-105'
             }`}
           >
             <Sliders size={16} />
@@ -326,10 +240,10 @@ export const TheaterMode: React.FC = () => {
               setIsAudioFxOpen(false);
             }}
             title="Up Next Queue"
-            className={`px-3 h-9 rounded-full flex items-center gap-1.5 cursor-pointer transition-all border text-xs font-bold ${
+            className={`px-3 h-9 rounded-full flex items-center gap-1.5 cursor-pointer transition-all duration-200 border text-xs font-bold shadow-lg ${
               isQueueOpen
-                ? 'bg-white text-black border-white'
-                : 'bg-black/40 hover:bg-white/20 border-white/10 text-white'
+                ? 'bg-white text-black border-white scale-105'
+                : 'bg-black/45 hover:bg-white/20 border-white/10 text-white hover:scale-105'
             }`}
           >
             <ListMusic size={16} />
@@ -345,7 +259,7 @@ export const TheaterMode: React.FC = () => {
           <button
             onClick={() => setIsTheaterMode(false)}
             title="Exit Theater Mode (Esc or F)"
-            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+            className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-all duration-200 hover:scale-105 shadow-lg"
           >
             <Minimize2 size={16} />
           </button>
@@ -354,7 +268,7 @@ export const TheaterMode: React.FC = () => {
 
       {/* Audio FX Popover */}
       {isAudioFxOpen && (
-        <div className="absolute top-20 right-8 z-30 w-72 bg-[#181818]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl text-white animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-20 right-6 sm:right-10 z-40 w-72 bg-[#181818]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl text-white animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-3">
             <div className="flex items-center gap-2">
               <Sliders size={15} className="text-spotify-green" />
@@ -362,7 +276,7 @@ export const TheaterMode: React.FC = () => {
             </div>
             <button
               onClick={() => setIsAudioFxOpen(false)}
-              className="text-white/60 hover:text-white p-1"
+              className="text-white/60 hover:text-white p-1 cursor-pointer transition-colors"
             >
               <X size={15} />
             </button>
@@ -378,7 +292,7 @@ export const TheaterMode: React.FC = () => {
                     onClick={() => setEqPreset(pName)}
                     className={`px-2.5 py-1.5 rounded-lg text-xs font-semibold text-left transition-colors cursor-pointer ${
                       settings.eqPreset === pName
-                        ? 'bg-spotify-green text-black'
+                        ? 'bg-spotify-green text-black font-bold shadow'
                         : 'bg-white/5 hover:bg-white/10 text-white/80'
                     }`}
                   >
@@ -402,7 +316,7 @@ export const TheaterMode: React.FC = () => {
                     onClick={() => updateAudioSettings({ playbackRate: rate })}
                     className={`py-1 rounded text-[11px] font-bold transition-colors cursor-pointer ${
                       (settings.playbackRate || 1) === rate
-                        ? 'bg-spotify-green text-black'
+                        ? 'bg-spotify-green text-black shadow'
                         : 'bg-white/10 hover:bg-white/15 text-white/80'
                     }`}
                   >
@@ -417,7 +331,7 @@ export const TheaterMode: React.FC = () => {
 
       {/* Up Next Queue Peeker Drawer */}
       {isQueueOpen && (
-        <div className="absolute top-20 right-8 z-30 w-80 max-h-[60vh] bg-[#181818]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl text-white flex flex-col animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute top-20 right-6 sm:right-10 z-40 w-80 max-h-[60vh] bg-[#181818]/95 backdrop-blur-2xl border border-white/15 rounded-2xl p-4 shadow-2xl text-white flex flex-col animate-in fade-in zoom-in-95 duration-150">
           <div className="flex items-center justify-between pb-3 border-b border-white/10 mb-2">
             <div className="flex items-center gap-2">
               <ListMusic size={16} className="text-spotify-green" />
@@ -436,7 +350,7 @@ export const TheaterMode: React.FC = () => {
               )}
               <button
                 onClick={() => setIsQueueOpen(false)}
-                className="text-white/60 hover:text-white p-1"
+                className="text-white/60 hover:text-white p-1 cursor-pointer transition-colors"
               >
                 <X size={15} />
               </button>
@@ -476,7 +390,7 @@ export const TheaterMode: React.FC = () => {
                       e.stopPropagation();
                       removeFromQueue(i);
                     }}
-                    className="p-1 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="p-1 text-white/40 hover:text-red-400 opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
                     title="Remove from queue"
                   >
                     <Trash2 size={13} />
@@ -489,38 +403,49 @@ export const TheaterMode: React.FC = () => {
       )}
 
       {/* Main Center Stage */}
-      {theaterTab === 'art' ? (
+      {viewMode === 'vinyl' ? (
+        /* High-End Realistic Spinning Vinyl Turntable Deck */
         <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 max-w-5xl mx-auto w-full my-auto relative z-10 px-4">
-          {/* Stage Left: Artwork (Card Mode vs Vinyl Turntable Mode) */}
-          {stageMode === 'vinyl' ? (
-            /* 3D Spinning Vinyl Record Stage */
-            <div
-              className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 flex items-center justify-center shrink-0"
-              style={{
-                transform: `scale(${bassScale})`,
-                transition: 'transform 80ms ease-out',
-              }}
-            >
-              {/* Rotating Vinyl Record Disc (Slides 45% out to the right) */}
+          {/* Turntable Platter Deck with Stylus Tonearm */}
+          <div
+            className="relative shrink-0 flex items-center justify-center"
+            style={{
+              transform: `scale(${bassScale})`,
+              transition: 'transform 90ms cubic-bezier(0.25, 1, 0.5, 1)',
+            }}
+          >
+            {/* Turntable Base Chassis / Platter */}
+            <div className="relative w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-3xl bg-[#141416]/95 border border-white/15 shadow-[0_30px_90px_rgba(0,0,0,0.9)] p-4 sm:p-5 flex items-center justify-center overflow-visible backdrop-blur-xl">
+              {/* Circular Recessed Platter Well */}
               <div
-                className={`absolute w-56 h-56 sm:w-72 sm:h-72 md:w-84 md:h-84 rounded-full bg-[#121214] shadow-[0_15px_50px_rgba(0,0,0,0.9)] flex items-center justify-center transition-all duration-700 ease-out border border-white/10 ${
-                  isPlaying ? 'translate-x-12 sm:translate-x-16 md:translate-x-20' : 'translate-x-6'
-                }`}
+                className="w-full h-full rounded-full flex items-center justify-center relative shadow-inner border border-white/10"
                 style={{
-                  boxShadow: `0 15px 50px rgba(0,0,0,0.9), 0 0 35px ${accentHex}44`,
+                  background: 'radial-gradient(circle, #0a0a0c 0%, #151518 70%, #0d0d10 100%)',
+                  boxShadow: `0 0 45px ${accentHex}33, inset 0 0 25px rgba(0,0,0,0.9)`,
                 }}
               >
-                {/* Concentric Vinyl Grooves */}
+                {/* 12" LP Grooved Vinyl Disc */}
                 <div
-                  className="w-full h-full rounded-full flex items-center justify-center"
+                  className={`w-[90%] h-[90%] rounded-full shadow-2xl relative flex items-center justify-center ${
+                    isPlaying ? 'animate-vinyl-spin' : 'animate-vinyl-spin-paused'
+                  }`}
                   style={{
                     background:
-                      'repeating-radial-gradient(circle, #151515, #151515 2px, #0b0b0d 3px, #0b0b0d 5px)',
-                    animation: isPlaying ? 'spin 12s linear infinite' : 'none',
+                      'repeating-radial-gradient(circle, #1a1a1e, #1a1a1e 2px, #0c0c0e 3px, #0c0c0e 6px)',
+                    boxShadow: '0 10px 40px rgba(0,0,0,0.95), inset 0 0 30px rgba(255,255,255,0.06)',
                   }}
                 >
+                  {/* Holographic Light Reflection Sheen Overlays */}
+                  <div
+                    className="absolute inset-0 rounded-full pointer-events-none opacity-40"
+                    style={{
+                      background:
+                        'conic-gradient(from 45deg, transparent 0deg, rgba(255,255,255,0.18) 50deg, transparent 100deg, rgba(255,255,255,0.18) 230deg, transparent 280deg)',
+                    }}
+                  />
+
                   {/* Center Record Label Artwork Thumbnail */}
-                  <div className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 rounded-full border-2 border-white/20 overflow-hidden shadow-inner relative flex items-center justify-center">
+                  <div className="w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 rounded-full border-4 border-white/20 overflow-hidden shadow-2xl relative flex items-center justify-center">
                     {currentTrack.coverUrl ? (
                       <img
                         src={currentTrack.coverUrl}
@@ -532,81 +457,75 @@ export const TheaterMode: React.FC = () => {
                         className="w-full h-full flex items-center justify-center"
                         style={{ backgroundColor: accentHex }}
                       >
-                        <Music size={28} className="text-black" />
+                        <Music size={32} className="text-black" />
                       </div>
                     )}
-                    {/* Spindle hole */}
-                    <div className="w-4 h-4 rounded-full bg-[#0a0a0c] border border-white/40 absolute z-10" />
+                    {/* Metal Spindle Center Ring */}
+                    <div className="w-5 h-5 rounded-full bg-[#18181b] border-2 border-white/80 absolute z-10 shadow-lg" />
                   </div>
                 </div>
-              </div>
 
-              {/* Album Jacket Sleeve */}
-              <div
-                onClick={() => setStageMode('card')}
-                title="Click to toggle full card view"
-                className="w-56 h-56 sm:w-72 sm:h-72 md:w-84 md:h-84 rounded-2xl bg-[#282828] relative z-10 shadow-[0_25px_70px_rgba(0,0,0,0.85)] overflow-hidden border border-white/10 cursor-pointer group"
-              >
-                {currentTrack.coverUrl ? (
-                  <img
-                    src={currentTrack.coverUrl}
-                    alt={currentTrack.title}
-                    className="w-full h-full object-cover group-hover:scale-104 transition-transform duration-300"
-                  />
-                ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Music size={72} className="text-spotify-muted" />
+                {/* Turntable Stylus Tonearm (Pivots onto record when playing, rests when paused) */}
+                <div
+                  className="absolute -top-3 -right-2 sm:-top-4 sm:-right-3 z-30 pointer-events-none"
+                  style={{
+                    transformOrigin: '24px 24px',
+                    transform: isPlaying ? 'rotate(32deg)' : 'rotate(0deg)',
+                    transition: 'transform 700ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  }}
+                >
+                  {/* Pivot Base */}
+                  <div className="w-12 h-12 rounded-full bg-gradient-to-br from-[#444] via-[#222] to-[#111] border border-white/30 shadow-2xl flex items-center justify-center">
+                    <div className="w-5 h-5 rounded-full bg-[#111] border border-white/40 shadow-inner" />
                   </div>
-                )}
-                <div className="absolute inset-0 bg-black/35 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-                  <span className="text-xs font-bold text-white bg-black/60 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/20">
-                    Switch to Card
-                  </span>
+
+                  {/* Chrome Curved Tonearm Rod */}
+                  <div
+                    className="w-1.5 h-36 sm:h-44 md:h-52 bg-gradient-to-b from-[#888] via-[#e5e5e5] to-[#777] rounded-full shadow-lg ml-[21px] -mt-1 origin-top"
+                    style={{
+                      transform: 'rotate(8deg)',
+                    }}
+                  >
+                    {/* Stylus Cartridge & Needle Head */}
+                    <div className="absolute -bottom-2 -left-2.5 w-6 h-9 rounded-sm bg-[#1c1c20] border border-white/30 shadow-xl flex flex-col items-center justify-between p-1">
+                      <div className="w-2.5 h-1.5 bg-spotify-green rounded-full shadow-[0_0_8px_#1ed760]" />
+                      <div className="w-1 h-3 bg-white/80 rounded-full" />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
-          ) : (
-            /* 3D Tilted Card Stage with Bass Spring Bounce */
+
+            {/* Accompanying 3D Vinyl Sleeve Jacket (Tucked beside the deck) */}
             <div
-              style={{
-                transform: `scale(${bassScale})`,
-                transition: 'transform 80ms ease-out',
-              }}
-              className="shrink-0"
+              onClick={() => setViewMode('card')}
+              title="Click to view 3D Card Art"
+              className="hidden lg:block absolute -left-16 bottom-2 w-36 h-36 rounded-xl bg-[#202020] shadow-[0_20px_50px_rgba(0,0,0,0.85)] border border-white/15 overflow-hidden -rotate-6 hover:rotate-0 hover:scale-105 transition-all duration-300 cursor-pointer z-0"
             >
-              <TiltedCard
-                rotateAmplitude={8}
-                scaleOnHover={1.03}
-                className="w-56 h-56 sm:w-72 sm:h-72 md:w-88 md:h-88 rounded-2xl bg-[#282828] flex items-center justify-center overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.85)] border border-white/10 cursor-pointer"
-              >
-                {currentTrack.coverUrl ? (
-                  <img
-                    src={currentTrack.coverUrl}
-                    alt={currentTrack.title}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <Music size={80} className="text-spotify-muted" />
-                )}
-              </TiltedCard>
+              {currentTrack.coverUrl ? (
+                <img src={currentTrack.coverUrl} alt="" className="w-full h-full object-cover" />
+              ) : (
+                <div className="w-full h-full flex items-center justify-center">
+                  <Music size={36} className="text-white/40" />
+                </div>
+              )}
             </div>
-          )}
+          </div>
 
           {/* Stage Right: Track Details & Interactive Playback Controls */}
           <div className="text-center md:text-left min-w-0 flex-1 w-full max-w-xl">
-            <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-2 truncate drop-shadow-md">
+            <span className="inline-block text-[11px] font-black uppercase tracking-widest text-spotify-green bg-spotify-green/15 px-3 py-1 rounded-full border border-spotify-green/25 mb-3 shadow-inner">
+              Now Spinning • 33 RPM
+            </span>
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-2 truncate drop-shadow-md">
               <BlurText text={currentTrack.title} />
             </h1>
-            <p className="text-lg sm:text-xl md:text-2xl text-white/80 font-medium mb-6 truncate">
+            <p className="text-base sm:text-lg md:text-xl text-white/80 font-medium mb-6 truncate">
               {currentTrack.artist} • {currentTrack.album}
             </p>
 
             {/* Scrubber Progress Bar */}
-            <div
-              className={`w-full flex items-center gap-3 text-xs text-white/70 font-mono mb-6 transition-all duration-500 ${
-                isControlsVisible ? 'opacity-100' : 'opacity-0'
-              }`}
-            >
+            <div className="w-full flex items-center gap-3 text-xs text-white/70 font-mono mb-6">
               <span className="w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
               <div className="flex-1 relative flex items-center group cursor-pointer h-4">
                 <input
@@ -619,32 +538,28 @@ export const TheaterMode: React.FC = () => {
                   className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-spotify-green hover:h-2 transition-all"
                 />
               </div>
-              <span className="w-10 text-left tabular-nums">{formatTime(duration)}</span>
+              <span className="w-10 tabular-nums">{formatTime(duration)}</span>
             </div>
 
-            {/* Playback Controls with Cinema Immersion Fade */}
-            <div
-              className={`flex items-center justify-center md:justify-start gap-6 transition-all duration-500 ${
-                isControlsVisible ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3 pointer-events-none'
-              }`}
-            >
+            {/* Fluid Playback Controls */}
+            <div className="flex items-center justify-center md:justify-start gap-4 sm:gap-6 flex-wrap">
               <button
                 onClick={toggleShuffle}
                 title="Toggle Shuffle"
-                className={`p-2 transition-colors cursor-pointer relative ${
+                className={`p-2 rounded-full transition-all duration-200 cursor-pointer relative hover:scale-110 active:scale-90 ${
                   isShuffle ? 'text-spotify-green' : 'text-white/60 hover:text-white'
                 }`}
               >
                 <ShuffleIcon size={22} />
                 {isShuffle && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2 shadow-[0_0_6px_#1ed760]" />
                 )}
               </button>
 
               <button
                 onClick={prevTrack}
                 title="Previous track"
-                className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform cursor-pointer"
+                className="p-2 text-white/80 hover:text-white hover:scale-115 active:scale-90 transition-all duration-200 cursor-pointer"
               >
                 <SkipBackIcon size={26} />
               </button>
@@ -653,7 +568,12 @@ export const TheaterMode: React.FC = () => {
                 <button
                   onClick={togglePlay}
                   title={isPlaying ? 'Pause' : 'Play'}
-                  className="w-16 h-16 rounded-full bg-white text-black hover:scale-106 active:scale-95 transition-transform flex items-center justify-center shadow-2xl cursor-pointer"
+                  style={{
+                    boxShadow: isPlaying
+                      ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
+                      : '0 10px 30px rgba(0,0,0,0.6)',
+                  }}
+                  className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
                 >
                   {isPlaying ? (
                     <Pause16Icon size={26} />
@@ -666,7 +586,7 @@ export const TheaterMode: React.FC = () => {
               <button
                 onClick={nextTrack}
                 title="Next track"
-                className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform cursor-pointer"
+                className="p-2 text-white/80 hover:text-white hover:scale-115 active:scale-90 transition-all duration-200 cursor-pointer"
               >
                 <SkipForwardIcon size={26} />
               </button>
@@ -674,13 +594,13 @@ export const TheaterMode: React.FC = () => {
               <button
                 onClick={cycleRepeat}
                 title="Cycle Repeat"
-                className={`p-2 transition-colors cursor-pointer relative ${
+                className={`p-2 rounded-full transition-all duration-200 cursor-pointer relative hover:scale-110 active:scale-90 ${
                   repeatMode !== 'off' ? 'text-spotify-green' : 'text-white/60 hover:text-white'
                 }`}
               >
                 <RepeatIcon size={22} />
                 {repeatMode !== 'off' && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2 shadow-[0_0_6px_#1ed760]" />
                 )}
                 {repeatMode === 'one' && (
                   <span className="text-[10px] font-bold absolute -top-1 -right-1 text-spotify-green">
@@ -689,18 +609,190 @@ export const TheaterMode: React.FC = () => {
                 )}
               </button>
 
+              {/* In-Bar Volume Slider (No accidental mouse wheel scrolling) */}
+              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-md">
+                <button
+                  onClick={toggleMute}
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                  className="text-white/70 hover:text-white cursor-pointer transition-colors"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX size={18} className="text-red-400" />
+                  ) : volume < 0.5 ? (
+                    <Volume1 size={18} />
+                  ) : (
+                    <Volume2 size={18} className="text-spotify-green" />
+                  )}
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={isMuted ? 0 : volume}
+                  onChange={e => {
+                    if (isMuted) toggleMute();
+                    setVolume(Number(e.target.value));
+                  }}
+                  className="w-16 sm:w-20 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-spotify-green hover:h-1.5 transition-all"
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : viewMode === 'card' ? (
+        /* 3D Tilted Card Stage with Bass Spring Bounce */
+        <div className="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-14 max-w-5xl mx-auto w-full my-auto relative z-10 px-4">
+          <div
+            style={{
+              transform: `scale(${bassScale})`,
+              transition: 'transform 90ms cubic-bezier(0.25, 1, 0.5, 1)',
+            }}
+            className="shrink-0"
+          >
+            <TiltedCard
+              rotateAmplitude={8}
+              scaleOnHover={1.03}
+              className="w-64 h-64 sm:w-80 sm:h-80 md:w-96 md:h-96 rounded-2xl bg-[#282828] flex items-center justify-center overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.85)] border border-white/10 cursor-pointer"
+            >
+              {currentTrack.coverUrl ? (
+                <img
+                  src={currentTrack.coverUrl}
+                  alt={currentTrack.title}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <Music size={80} className="text-spotify-muted" />
+              )}
+            </TiltedCard>
+          </div>
+
+          {/* Track Details & Controls */}
+          <div className="text-center md:text-left min-w-0 flex-1 w-full max-w-xl">
+            <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-extrabold text-white tracking-tight mb-2 truncate drop-shadow-md">
+              <BlurText text={currentTrack.title} />
+            </h1>
+            <p className="text-base sm:text-lg md:text-xl text-white/80 font-medium mb-6 truncate">
+              {currentTrack.artist} • {currentTrack.album}
+            </p>
+
+            {/* Scrubber Progress Bar */}
+            <div className="w-full flex items-center gap-3 text-xs text-white/70 font-mono mb-6">
+              <span className="w-10 text-right tabular-nums">{formatTime(currentTime)}</span>
+              <div className="flex-1 relative flex items-center group cursor-pointer h-4">
+                <input
+                  type="range"
+                  min={0}
+                  max={duration > 0 ? duration : 100}
+                  step={0.1}
+                  value={currentTime}
+                  onChange={e => seek(Number(e.target.value))}
+                  className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-spotify-green hover:h-2 transition-all"
+                />
+              </div>
+              <span className="w-10 tabular-nums">{formatTime(duration)}</span>
+            </div>
+
+            {/* Controls */}
+            <div className="flex items-center justify-center md:justify-start gap-4 sm:gap-6 flex-wrap">
               <button
-                onClick={toggleMute}
-                title={isMuted ? 'Unmute' : 'Mute'}
-                className="p-2 text-white/60 hover:text-white transition-colors cursor-pointer"
+                onClick={toggleShuffle}
+                title="Toggle Shuffle"
+                className={`p-2 rounded-full transition-all duration-200 cursor-pointer relative hover:scale-110 active:scale-90 ${
+                  isShuffle ? 'text-spotify-green' : 'text-white/60 hover:text-white'
+                }`}
               >
-                {isMuted || volume === 0 ? <VolumeX size={22} /> : <Volume2 size={22} />}
+                <ShuffleIcon size={22} />
+                {isShuffle && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2 shadow-[0_0_6px_#1ed760]" />
+                )}
               </button>
+
+              <button
+                onClick={prevTrack}
+                title="Previous track"
+                className="p-2 text-white/80 hover:text-white hover:scale-115 active:scale-90 transition-all duration-200 cursor-pointer"
+              >
+                <SkipBackIcon size={26} />
+              </button>
+
+              <ClickSpark sparkColor={accentHex}>
+                <button
+                  onClick={togglePlay}
+                  title={isPlaying ? 'Pause' : 'Play'}
+                  style={{
+                    boxShadow: isPlaying
+                      ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
+                      : '0 10px 30px rgba(0,0,0,0.6)',
+                  }}
+                  className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
+                >
+                  {isPlaying ? (
+                    <Pause16Icon size={26} />
+                  ) : (
+                    <Play16Icon size={26} className="ml-1" />
+                  )}
+                </button>
+              </ClickSpark>
+
+              <button
+                onClick={nextTrack}
+                title="Next track"
+                className="p-2 text-white/80 hover:text-white hover:scale-115 active:scale-90 transition-all duration-200 cursor-pointer"
+              >
+                <SkipForwardIcon size={26} />
+              </button>
+
+              <button
+                onClick={cycleRepeat}
+                title="Cycle Repeat"
+                className={`p-2 rounded-full transition-all duration-200 cursor-pointer relative hover:scale-110 active:scale-90 ${
+                  repeatMode !== 'off' ? 'text-spotify-green' : 'text-white/60 hover:text-white'
+                }`}
+              >
+                <RepeatIcon size={22} />
+                {repeatMode !== 'off' && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2 shadow-[0_0_6px_#1ed760]" />
+                )}
+                {repeatMode === 'one' && (
+                  <span className="text-[10px] font-bold absolute -top-1 -right-1 text-spotify-green">
+                    1
+                  </span>
+                )}
+              </button>
+
+              <div className="flex items-center gap-2 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 shadow-md">
+                <button
+                  onClick={toggleMute}
+                  title={isMuted ? 'Unmute' : 'Mute'}
+                  className="text-white/70 hover:text-white cursor-pointer transition-colors"
+                >
+                  {isMuted || volume === 0 ? (
+                    <VolumeX size={18} className="text-red-400" />
+                  ) : volume < 0.5 ? (
+                    <Volume1 size={18} />
+                  ) : (
+                    <Volume2 size={18} className="text-spotify-green" />
+                  )}
+                </button>
+                <input
+                  type="range"
+                  min={0}
+                  max={1}
+                  step={0.01}
+                  value={isMuted ? 0 : volume}
+                  onChange={e => {
+                    if (isMuted) toggleMute();
+                    setVolume(Number(e.target.value));
+                  }}
+                  className="w-16 sm:w-20 h-1 bg-white/20 rounded-full appearance-none cursor-pointer accent-spotify-green hover:h-1.5 transition-all"
+                />
+              </div>
             </div>
           </div>
         </div>
       ) : (
-        /* Lyrics View */
+        /* Synced Real-Time Lyrics View */
         <div className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-6 text-center select-text no-scrollbar max-h-[60vh]">
           {currentTrack.lyrics && currentTrack.lyrics.length > 0 ? (
             currentTrack.lyrics.map((line, idx) => {
@@ -732,10 +824,10 @@ export const TheaterMode: React.FC = () => {
               <Mic2 size={48} className="mx-auto text-spotify-muted" />
               <p className="text-xl font-bold text-white">No Synced Lyrics Available</p>
               <button
-                onClick={() => setTheaterTab('art')}
-                className="px-5 py-2 rounded-full bg-white text-black font-bold text-xs hover:scale-105 cursor-pointer"
+                onClick={() => setViewMode('vinyl')}
+                className="px-5 py-2 rounded-full bg-white text-black font-bold text-xs hover:scale-105 cursor-pointer shadow-lg transition-transform"
               >
-                View Artwork
+                View Vinyl Turntable
               </button>
             </div>
           )}

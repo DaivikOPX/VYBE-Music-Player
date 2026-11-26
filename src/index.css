@@ -219,6 +219,22 @@
   animation: ui-toast-in 200ms cubic-bezier(0.22, 1, 0.36, 1) both;
 }
 
+@keyframes vinyl-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+.animate-vinyl-spin {
+  animation: vinyl-spin 16s linear infinite;
+}
+.animate-vinyl-spin-paused {
+  animation: vinyl-spin 16s linear infinite;
+  animation-play-state: paused !important;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .animate-view-enter,
   .animate-pop-in,

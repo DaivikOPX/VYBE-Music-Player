@@ -9,14 +9,12 @@ import {
   X,
   User,
   Check,
-  FolderOpen,
   RefreshCw,
   Loader2,
   Sparkles,
   Settings,
   BarChart3,
   Droplets,
-  Sliders,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -56,7 +54,6 @@ export const TopNav: React.FC = () => {
     updateAudioSettings,
     setAmoledMode,
     setHazyMode,
-    setHazyBlur,
     profile,
     showToast,
     setIsTheaterMode,
@@ -118,19 +115,19 @@ export const TopNav: React.FC = () => {
     <header
       ref={navRef}
       data-testid="global-nav-bar"
-      className={`hidden md:flex h-14 ${
+      className={`hidden md:flex h-16 ${
         settings.hazyMode
-          ? 'bg-black/25 backdrop-blur-3xl border-b border-white/10'
-          : 'bg-black/90 backdrop-blur-2xl border-b border-white/[0.06]'
-      } items-center justify-between px-3 select-none text-spotify-muted shrink-0 relative z-40 app-drag`}
+          ? 'bg-black/35 backdrop-blur-3xl border-b border-white/5'
+          : 'bg-black border-b border-black'
+      } items-center justify-between px-4 select-none text-spotify-muted shrink-0 relative z-40 app-drag`}
     >
       {/* Left: App Menu Dots & History Navigation */}
-      <div className="flex items-center gap-2 min-w-[140px] app-no-drag">
+      <div className="flex items-center gap-2 min-w-[200px] app-no-drag">
         <div className="relative">
           <button
             onClick={() => setMenuOpen(menuOpen === 'app' ? null : 'app')}
             title="Menu"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#1f1f1f] transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
           >
             <MoreHorizontal size={18} />
           </button>
@@ -562,38 +559,38 @@ export const TopNav: React.FC = () => {
           )}
         </div>
 
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <button
             onClick={goBack}
             disabled={!canGoBack}
             title="Go back"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white disabled:opacity-35 disabled:hover:text-spotify-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="w-8 h-8 rounded-full bg-black/40 hover:bg-white/10 flex items-center justify-center text-spotify-muted hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-spotify-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
-            <ChevronLeft size={22} />
+            <ChevronLeft size={20} />
           </button>
           <button
             onClick={goForward}
             disabled={!canGoForward}
             title="Go forward"
-            className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white disabled:opacity-35 disabled:hover:text-spotify-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
+            className="w-8 h-8 rounded-full bg-black/40 hover:bg-white/10 flex items-center justify-center text-spotify-muted hover:text-white disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-spotify-muted transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
-            <ChevronRight size={22} />
+            <ChevronRight size={20} />
           </button>
         </div>
       </div>
 
-      {/* Center: Home Button + Search Pill */}
-      <div className="flex items-center gap-2 flex-1 max-w-[540px] justify-center px-2 app-no-drag">
+      {/* Center: Home Button + Search Pill (Dead-Centered Spotify Layout) */}
+      <div className="flex-1 flex items-center justify-center gap-2 max-w-[620px] mx-auto px-2 app-no-drag">
         <button
           data-testid="home-button"
           onClick={() => navigate({ name: 'home' })}
           title="Home"
-          className="w-10 h-10 rounded-full bg-[#1f1f1f] hover:bg-[#2a2a2a] hover:scale-104 active:scale-95 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer"
+          className="w-12 h-12 rounded-full bg-[#1f1f1f] hover:bg-[#2a2a2a] hover:scale-104 active:scale-95 text-white flex items-center justify-center transition-all shrink-0 cursor-pointer shadow-sm"
         >
           {route.name === 'home' ? (
-            <HomeFilledIcon size={20} className="text-white" />
+            <HomeFilledIcon size={24} className="text-white" />
           ) : (
-            <HomeOutlineIcon size={20} className="text-spotify-muted hover:text-white" />
+            <HomeOutlineIcon size={24} className="text-spotify-muted hover:text-white" />
           )}
         </button>
 
@@ -603,10 +600,10 @@ export const TopNav: React.FC = () => {
               navigate({ name: searchQuery.trim() ? 'search' : 'browse' });
             }
           }}
-          className="relative flex-1 max-w-[480px] h-10 bg-[#1f1f1f] hover:bg-[#2a2a2a] focus-within:bg-[#242424] focus-within:ring-2 focus-within:ring-white rounded-full flex items-center px-3.5 transition-all group"
+          className="relative flex-1 max-w-[480px] h-12 bg-[#1f1f1f] hover:bg-[#2a2a2a] focus-within:bg-[#242424] focus-within:ring-2 focus-within:ring-white rounded-full flex items-center px-4 transition-all group border border-transparent shadow-sm"
         >
           <SearchIcon
-            size={18}
+            size={20}
             className="text-spotify-muted group-hover:text-white group-focus-within:text-white transition-colors mr-3 shrink-0"
           />
           <input
@@ -630,8 +627,8 @@ export const TopNav: React.FC = () => {
                 navigate({ name: 'search' });
               }
             }}
-            placeholder="What do you want to play? (Ctrl+K)"
-            className="bg-transparent text-white placeholder:text-spotify-muted text-sm font-normal w-full focus:outline-none"
+            placeholder="What do you want to play?"
+            className="bg-transparent text-white placeholder:text-spotify-muted text-[14px] font-normal w-full focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -647,201 +644,43 @@ export const TopNav: React.FC = () => {
               <X size={16} />
             </button>
           )}
-          <div className="h-5 w-[1px] bg-[#7c7c7c]/40 mx-1.5 shrink-0" />
+          <div className="h-6 w-[1px] bg-white/15 mx-2 shrink-0" />
           <button
             data-testid="browse-button"
             onClick={e => {
               e.stopPropagation();
               navigate({ name: 'browse' });
             }}
-            title="Browse Library"
+            title="Browse"
             className="p-1 text-spotify-muted hover:text-white transition-colors cursor-pointer shrink-0"
           >
             {route.name === 'browse' ? (
-              <BrowseFilledIcon size={19} className="text-white" />
+              <BrowseFilledIcon size={22} className="text-white" />
             ) : (
-              <BrowseOutlineIcon size={19} />
+              <BrowseOutlineIcon size={22} />
             )}
           </button>
         </div>
       </div>
 
-      {/* Right: Utility Buttons & Real Desktop Window Caption Controls */}
-      <div className="flex items-center gap-1.5 min-w-[200px] justify-end app-no-drag">
+      {/* Right: Authentic Uncluttered Spotify Actions & Native Caption Controls */}
+      <div className="flex items-center gap-3 min-w-[200px] justify-end app-no-drag">
         {isImporting && (
           <div
             title="Scanning local music files..."
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-spotify-green/15 text-spotify-green text-xs font-bold mr-1"
+            className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-spotify-green/15 text-spotify-green text-xs font-semibold mr-1"
           >
             <Loader2 size={13} className="animate-spin" />
             <span>Importing</span>
           </div>
         )}
 
-        <button
-          onClick={() => {
-            if (!currentTrack && tracks.length > 0) {
-              playTrack(tracks[0], tracks, null);
-            }
-            setIsTheaterMode(true);
-          }}
-          title="Theater Mode & Visualizer (F)"
-          className="px-2.5 py-1 rounded-full flex items-center gap-1.5 text-xs font-semibold bg-white/10 hover:bg-white/20 text-white hover:text-spotify-green hover:scale-104 transition-all cursor-pointer border border-white/10"
-        >
-          <Sparkles size={14} className="text-spotify-green" />
-          <span className="hidden sm:inline">Theater Mode</span>
-        </button>
-
-        <button
-          onClick={() => void pickNativeAudioFolder()}
-          title="Import Music Folder"
-          className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#1f1f1f] hover:scale-105 transition-all cursor-pointer"
-        >
-          <FolderOpen size={17} />
-        </button>
-
-        {/* Hazy Glass & Blur Quick Popover directly in settings bar */}
-        <div className="relative">
-          <button
-            onClick={() => setMenuOpen(menuOpen === 'hazy' ? null : 'hazy')}
-            title="Display & Hazy Glass Blur Settings"
-            className={`w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer relative ${
-              menuOpen === 'hazy' || settings.hazyMode
-                ? 'text-spotify-green bg-white/10 ring-1 ring-spotify-green/40'
-                : 'text-spotify-muted hover:text-white hover:bg-[#1f1f1f]'
-            }`}
-          >
-            <Sliders size={16} />
-            {settings.hazyMode && (
-              <span className="absolute top-1 right-1 w-1.5 h-1.5 rounded-full bg-spotify-green shadow-xs" />
-            )}
-          </button>
-
-          {menuOpen === 'hazy' && (
-            <div className="absolute right-0 top-10 w-72 bg-[#222222]/95 backdrop-blur-2xl border border-white/10 rounded-xl p-3.5 shadow-2xl z-50 text-white animate-in fade-in zoom-in-95 duration-150">
-              <div className="flex items-center justify-between pb-2.5 mb-2.5 border-b border-white/10">
-                <div className="flex items-center gap-2">
-                  <Droplets size={16} className={settings.hazyMode ? 'text-spotify-green' : 'text-spotify-muted'} />
-                  <span className="font-bold text-xs tracking-wide">Hazy Glass Theme</span>
-                </div>
-                <button
-                  onClick={() => setHazyMode(!settings.hazyMode)}
-                  className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none ${
-                    settings.hazyMode ? 'bg-spotify-green' : 'bg-white/20'
-                  }`}
-                >
-                  <span
-                    className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out mt-0.5 ml-0.5 ${
-                      settings.hazyMode ? 'translate-x-4' : 'translate-x-0'
-                    }`}
-                  />
-                </button>
-              </div>
-
-              {/* Blur & Transparency Slider */}
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-spotify-muted font-medium">Blur & Transparency</span>
-                  <span className="font-mono font-bold text-spotify-green bg-spotify-green/10 px-1.5 py-0.5 rounded text-[11px]">
-                    {(settings.hazyBlur ?? 45) === 0 ? '0% (Transparent)' : `${settings.hazyBlur ?? 45}%`}
-                  </span>
-                </div>
-
-                <input
-                  type="range"
-                  min={0}
-                  max={100}
-                  step={1}
-                  value={settings.hazyBlur ?? 45}
-                  onChange={e => {
-                    const val = Number(e.target.value);
-                    setHazyBlur(val);
-                    if (!settings.hazyMode) setHazyMode(true);
-                  }}
-                  className="w-full h-1.5 bg-white/20 rounded-lg appearance-none cursor-pointer accent-spotify-green"
-                />
-
-                <div className="flex justify-between text-[10px] text-spotify-muted font-medium pt-0.5">
-                  <span>0% Clear</span>
-                  <span>50% Acrylic</span>
-                  <span>100% Full Blur</span>
-                </div>
-
-                {/* Preset Chips */}
-                <div className="grid grid-cols-5 gap-1 pt-1.5">
-                  {[
-                    { label: '0%', val: 0 },
-                    { label: '25%', val: 25 },
-                    { label: '50%', val: 50 },
-                    { label: '75%', val: 75 },
-                    { label: '100%', val: 100 },
-                  ].map(p => (
-                    <button
-                      key={p.val}
-                      onClick={() => {
-                        setHazyBlur(p.val);
-                        if (!settings.hazyMode) setHazyMode(true);
-                      }}
-                      className={`text-[10px] font-bold py-1 rounded transition-colors text-center cursor-pointer ${
-                        (settings.hazyBlur ?? 45) === p.val
-                          ? 'bg-spotify-green text-black font-extrabold shadow-sm'
-                          : 'bg-white/10 hover:bg-white/15 text-spotify-muted hover:text-white'
-                      }`}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="my-2.5 border-t border-white/10" />
-
-              {/* AMOLED toggle */}
-              <button
-                onClick={() => setAmoledMode(!settings.amoledMode)}
-                className="w-full px-2 py-1.5 rounded hover:bg-white/10 flex items-center justify-between text-xs text-spotify-muted hover:text-white transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Sparkles size={13} />
-                  <span>AMOLED True Black</span>
-                </span>
-                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${settings.amoledMode ? 'bg-spotify-green/20 text-spotify-green' : 'bg-white/10 text-spotify-muted'}`}>
-                  {settings.amoledMode ? 'ON' : 'OFF'}
-                </span>
-              </button>
-
-              {/* Open Full Settings */}
-              <button
-                onClick={() => {
-                  navigate({ name: 'settings' });
-                  setMenuOpen(null);
-                }}
-                className="w-full mt-1 px-2 py-1.5 rounded hover:bg-white/10 flex items-center justify-between text-xs font-semibold text-white transition-colors cursor-pointer"
-              >
-                <span className="flex items-center gap-2">
-                  <Settings size={13} className="text-spotify-muted" />
-                  <span>All Display Settings</span>
-                </span>
-                <span className="text-spotify-muted text-[11px]">→</span>
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Direct Settings Gear Button in Top Navigation */}
-        <button
-          onClick={() => navigate({ name: 'settings' })}
-          title="Settings"
-          className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#1f1f1f] hover:scale-105 transition-all cursor-pointer"
-        >
-          <Settings size={16} />
-        </button>
-
+        {/* Profile Avatar Button */}
         <div className="relative">
           <button
             onClick={() => setMenuOpen(menuOpen === 'profile' ? null : 'profile')}
             title={`${profile.displayName} • Profile & Settings`}
-            className="w-8 h-8 rounded-full bg-[#1f1f1f] hover:scale-105 flex items-center justify-center transition-transform cursor-pointer overflow-hidden border border-white/10"
+            className="w-9 h-9 rounded-full bg-[#1f1f1f] hover:scale-105 active:scale-95 flex items-center justify-center transition-all cursor-pointer overflow-hidden border border-white/10"
           >
             {profile.avatarUrl ? (
               <img
@@ -852,7 +691,7 @@ export const TopNav: React.FC = () => {
             ) : (
               <span
                 style={{ backgroundColor: profile.accentColor || '#2e77d0' }}
-                className="w-full h-full flex items-center justify-center text-xs font-black text-white"
+                className="w-full h-full flex items-center justify-center text-xs font-bold text-white"
               >
                 {(profile.displayName || 'M').trim().charAt(0).toUpperCase()}
               </span>
@@ -860,37 +699,48 @@ export const TopNav: React.FC = () => {
           </button>
 
           {menuOpen === 'profile' && (
-            <div className="absolute right-0 top-10 w-56 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1.5 text-sm text-white z-50">
+            <div className="absolute right-0 top-11 w-56 bg-[#282828] rounded-lg shadow-2xl border border-white/10 py-1.5 text-[13px] text-white z-50 animate-in fade-in zoom-in-95 duration-100">
               <button
                 onClick={() => {
                   navigate({ name: 'profile' });
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer font-semibold"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
               >
                 <span>Profile</span>
-                <User size={14} className="text-spotify-muted" />
+                <User size={15} className="text-spotify-muted" />
               </button>
               <button
                 onClick={() => {
                   navigate({ name: 'settings' });
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium"
               >
                 <span>Settings</span>
-                <Settings size={14} className="text-spotify-muted" />
+                <Settings size={15} className="text-spotify-muted" />
               </button>
+              <button
+                onClick={() => {
+                  navigate({ name: 'stats' });
+                  setMenuOpen(null);
+                }}
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer font-medium text-spotify-green"
+              >
+                <span>Listening Stats</span>
+                <BarChart3 size={15} className="text-spotify-green" />
+              </button>
+              <div className="my-1 border-t border-white/10" />
               <button
                 onClick={() => {
                   setHazyMode(!settings.hazyMode);
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
               >
                 <span className="flex items-center gap-2">
                   <Droplets size={14} className={settings.hazyMode ? 'text-spotify-green' : 'text-spotify-muted'} />
-                  <span>Transparent Theme</span>
+                  <span>Glass Theme</span>
                 </span>
                 <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${settings.hazyMode ? 'bg-spotify-green/20 text-spotify-green' : 'bg-white/10 text-spotify-muted'}`}>
                   {settings.hazyMode ? 'ON' : 'OFF'}
@@ -898,69 +748,88 @@ export const TopNav: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  navigate({ name: 'stats' });
+                  setAmoledMode(!settings.amoledMode);
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer font-semibold text-spotify-green"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
               >
-                <span>Listening Stats</span>
-                <BarChart3 size={14} className="text-spotify-green" />
+                <span className="flex items-center gap-2">
+                  <Sparkles size={14} className={settings.amoledMode ? 'text-spotify-green' : 'text-spotify-muted'} />
+                  <span>AMOLED True Black</span>
+                </span>
+                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${settings.amoledMode ? 'bg-spotify-green/20 text-spotify-green' : 'bg-white/10 text-spotify-muted'}`}>
+                  {settings.amoledMode ? 'ON' : 'OFF'}
+                </span>
               </button>
               <div className="my-1 border-t border-white/10" />
-              <button
-                onClick={() => {
-                  void pickNativeAudioFiles();
-                  setMenuOpen(null);
-                }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
-              >
-                Import Local Audio Files
-              </button>
               <button
                 onClick={() => {
                   void pickNativeAudioFolder();
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 cursor-pointer text-[#d1d1d1] hover:text-white"
               >
-                Import Local Folder
+                Import Music Folder...
+              </button>
+              <button
+                onClick={() => {
+                  void pickNativeAudioFiles();
+                  setMenuOpen(null);
+                }}
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 cursor-pointer text-[#d1d1d1] hover:text-white"
+              >
+                Import Audio Files...
               </button>
               <button
                 onClick={() => {
                   setIsShortcutsOpen(true);
                   setMenuOpen(null);
                 }}
-                className="w-full px-3.5 py-2 text-left hover:bg-white/10 cursor-pointer"
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
               >
-                Keyboard Shortcuts
+                <span>Keyboard Shortcuts</span>
+                <span className="text-[11px] text-white/40">Ctrl+/</span>
+              </button>
+              <button
+                onClick={() => {
+                  if (!currentTrack && tracks.length > 0) {
+                    playTrack(tracks[0], tracks, null);
+                  }
+                  setIsTheaterMode(true);
+                  setMenuOpen(null);
+                }}
+                className="w-full px-4 py-2.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+              >
+                <span>Theater Mode</span>
+                <span className="text-[11px] text-white/40">F</span>
               </button>
             </div>
           )}
         </div>
 
-        {/* Native Window Controls (Desktop .exe only) */}
+        {/* Native Windows Caption Controls (Desktop .exe) */}
         {window.electronAPI && (
-          <div className="flex items-center ml-1 pl-2 border-l border-white/10">
+          <div className="flex items-center -mr-4 h-16 ml-1">
             <button
               onClick={handleMinimize}
               title="Minimize"
-              className="w-9 h-8 flex items-center justify-center text-spotify-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-12 h-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
-              <Minus size={14} />
+              <Minus size={15} />
             </button>
             <button
               onClick={handleMaximize}
               title={isMaximized ? 'Restore' : 'Maximize'}
-              className="w-9 h-8 flex items-center justify-center text-spotify-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              className="w-12 h-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
             >
-              {isMaximized ? <Copy size={12} /> : <Square size={12} />}
+              {isMaximized ? <Copy size={13} /> : <Square size={13} />}
             </button>
             <button
               onClick={handleClose}
               title="Close"
-              className="w-9 h-8 flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
+              className="w-12 h-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#e81123] transition-colors cursor-pointer"
             >
-              <X size={15} />
+              <X size={16} />
             </button>
           </div>
         )}

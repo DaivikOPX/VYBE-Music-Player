@@ -20,7 +20,7 @@ export default {
         'spotify-border': '#282828'
       },
       fontFamily: {
-        sans: ['Circular Std', 'Inter', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+        sans: ['CircularSp', 'Circular Std', 'CircularStd', 'Circular', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       }
     },
   },

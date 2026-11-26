@@ -14,10 +14,12 @@ import {
   Pencil,
   AlertTriangle,
   HardDrive,
+  Sparkles,
 } from 'lucide-react';
 import { Track } from '../types';
 import { usePlayer } from '../context/PlayerContext';
 import { TrackDetailsModal } from './TrackDetailsModal';
+import { CoverArtModal } from './CoverArtModal';
 import {
   Play16Icon,
   Pause16Icon,
@@ -74,6 +76,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
     settings,
   } = usePlayer();
   const [editingTags, setEditingTags] = useState(false);
+  const [isCoverArtOpen, setIsCoverArtOpen] = useState(false);
   const isMissingFile = missingTrackIds.includes(track.id);
   const isDisconnectedDrive = disconnectedDriveTrackIds?.includes(track.id);
 
@@ -363,6 +366,17 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         <span>Edit song details & cover...</span>
       </button>
 
+      <button
+        onClick={() => {
+          setIsCoverArtOpen(true);
+          setMenuState(null);
+        }}
+        className="w-full px-3 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer text-blue-400 hover:text-blue-300 font-medium"
+      >
+        <Sparkles size={15} className="text-blue-400" />
+        <span>Find Album Cover Online...</span>
+      </button>
+
       {canRemoveFromPlaylist && playlistId && (
         <>
           <div className="my-1 border-t border-white/10" />
@@ -641,6 +655,15 @@ export const TrackRow: React.FC<TrackRowProps> = ({
         track={track}
         isOpen={editingTags}
         onClose={() => setEditingTags(false)}
+      />
+
+      {/* Online Album Artwork Fetcher & ID3 Tagger Modal */}
+      <CoverArtModal
+        isOpen={isCoverArtOpen}
+        onClose={() => setIsCoverArtOpen(false)}
+        tracks={[track]}
+        initialArtist={track.artist}
+        initialAlbum={track.album}
       />
     </div>
   );

@@ -30,6 +30,7 @@ import { ProfileView } from './ProfileView';
 import { SettingsView } from './SettingsView';
 import { SearchBrowseView } from './SearchBrowseView';
 import { StatsView } from './StatsView';
+import { FolderTreeView } from './FolderTreeView';
 import { parseLrcText } from '../utils/lrcParser';
 import { TrackRow } from './TrackRow';
 import { PlayTriangleIcon, Pause16Icon, EqualizerBars } from './SpotifyIcons';
@@ -192,6 +193,7 @@ export const MainViewport: React.FC = () => {
           <AlbumView albumName={route.albumName} artistName={route.artistName} />
         )}
         {route.name === 'profile' && <ProfileView />}
+        {route.name === 'folder-tree' && <FolderTreeView />}
         {route.name === 'settings' && <SettingsView />}
         {route.name === 'stats' && <StatsView />}
         {(route.name === 'search' || route.name === 'browse') && <SearchBrowseView />}

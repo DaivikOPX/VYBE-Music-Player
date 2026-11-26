@@ -15,10 +15,12 @@ import {
   Laptop,
   HardDrive,
   Mic2,
+  FolderTree,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { usePlayer, EQ_BANDS, EQ_PRESETS } from '../context/PlayerContext';
 import { SpotlightCard, BlurText } from './reactbits';
+import { CoverArtModal } from './CoverArtModal';
 
 const ACCENT_SWATCHES = [
   { name: 'Spotify Green', color: '#1db954' },
@@ -95,7 +97,10 @@ export const SettingsView: React.FC = () => {
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [storageInfo, setStorageInfo] = useState<{ usedMb: string; quotaMb: string } | null>(null);
+  const [isBatchCoverModalOpen, setIsBatchCoverModalOpen] = useState(false);
   const backupInputRef = useRef<HTMLInputElement>(null);
+
+  const missingCoverTracks = tracks.filter(t => !t.coverUrl);
 
   useEffect(() => {
     navigator.storage?.estimate?.().then(est => {
@@ -1243,6 +1248,59 @@ export const SettingsView: React.FC = () => {
                 </p>
               )}
             </div>
+
+            {/* Folder Hierarchy Explorer Card */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-4 flex items-center justify-between gap-4">
+              <div className="space-y-1">
+                <div className="flex items-center gap-2">
+                  <FolderTree size={16} className="text-spotify-green" />
+                  <p className="text-sm font-semibold text-white">Folder Tree Explorer</p>
+                </div>
+                <p className="text-xs text-spotify-muted">
+                  Browse, explore, and play your physical music files organized in their disk directory structure.
+                </p>
+              </div>
+              <button
+                onClick={() => navigate({ name: 'folder-tree' })}
+                className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold shrink-0 transition-colors cursor-pointer"
+              >
+                Open Explorer
+              </button>
+            </div>
+
+            {/* Missing Album Artwork Scanner Card */}
+            <div className="bg-[#181818] border border-white/10 rounded-xl p-4 space-y-3">
+              <div className="flex items-center justify-between gap-4">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2">
+                    <Sparkles size={16} className="text-blue-400" />
+                    <p className="text-sm font-semibold text-white">Album Artwork Scanner</p>
+                  </div>
+                  <p className="text-xs text-spotify-muted">
+                    Automatically searches public Apple Music / iTunes and MusicBrainz databases to fetch high-res 600x600 covers and embed them into ID3 tags.
+                  </p>
+                </div>
+                {missingCoverTracks.length > 0 && (
+                  <button
+                    onClick={() => setIsBatchCoverModalOpen(true)}
+                    className="px-4 py-2 rounded-full bg-blue-500 hover:bg-blue-400 text-black text-xs font-bold shrink-0 transition-transform hover:scale-105 cursor-pointer"
+                  >
+                    Fetch Missing Covers ({missingCoverTracks.length})
+                  </button>
+                )}
+              </div>
+              <div className="flex items-center gap-2 pt-1 text-xs">
+                {missingCoverTracks.length === 0 ? (
+                  <span className="text-spotify-green font-medium">
+                    ✓ All {tracks.length} tracks in your library have album artwork loaded.
+                  </span>
+                ) : (
+                  <span className="text-amber-400 font-medium">
+                    ⚠️ {missingCoverTracks.length} of {tracks.length} track(s) are missing album artwork.
+                  </span>
+                )}
+              </div>
+            </div>
           </section>
         )}
 
@@ -1401,6 +1459,12 @@ export const SettingsView: React.FC = () => {
           </div>
         )}
       </div>
+
+      <CoverArtModal
+        isOpen={isBatchCoverModalOpen}
+        onClose={() => setIsBatchCoverModalOpen(false)}
+        tracks={missingCoverTracks}
+      />
     </div>
   );
 };

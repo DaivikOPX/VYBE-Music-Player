@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { X, Minimize2, ChevronDown, Music, Upload, Sliders, Keyboard, Plus, BarChart3, FolderOpen, FileAudio, Trash2, ArrowUp, ArrowDown, Shuffle, ArrowUpDown, Moon, BookmarkPlus } from 'lucide-react';
+import { X, Minimize2, ChevronDown, Music, Upload, Sliders, Keyboard, Plus, BarChart3, FolderOpen, FileAudio, Trash2, ArrowUp, ArrowDown, Shuffle, ArrowUpDown, Moon, BookmarkPlus, Mic2 } from 'lucide-react';
 import { App as CapApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
 import { PlayerProvider, usePlayer } from './context/PlayerContext';
@@ -43,6 +43,7 @@ const SHORTCUTS_LIST = [
   { keys: 'Ctrl + ,', desc: 'Open Settings' },
   { keys: 'Ctrl + + / -', desc: 'Zoom in / out' },
   { keys: 'Ctrl + 0', desc: 'Reset zoom' },
+  { keys: 'F', desc: 'Toggle Fullscreen Theater Mode' },
   { keys: '?  or  Ctrl + /', desc: 'Open / close shortcuts' },
 ];
 
@@ -103,7 +104,11 @@ const SpotifyShell: React.FC = () => {
     toastMessage,
     updateAudioSettings,
     activeAccentColor,
+    tracks,
   } = usePlayer();
+
+  const [theaterTab, setTheaterTab] = useState<'art' | 'lyrics'>('art');
+  const theaterLyricRef = useRef<HTMLParagraphElement>(null);
 
   const [mobileScrubbing, setMobileScrubbing] = useState(false);
   const [mobileScrubVal, setMobileScrubVal] = useState(0);
@@ -181,11 +186,25 @@ const SpotifyShell: React.FC = () => {
         updateAudioSettings({ zoomLevel: 100 });
         return;
       }
-      if (e.key === 'Escape' && isShortcutsOpen) {
-        setIsShortcutsOpen(false);
-        return;
+      if (e.key === 'Escape') {
+        if (isTheaterMode) {
+          setIsTheaterMode(false);
+          return;
+        }
+        if (isShortcutsOpen) {
+          setIsShortcutsOpen(false);
+          return;
+        }
       }
       if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'f' || e.key === 'F') {
+        e.preventDefault();
+        if (!currentTrack && tracks.length > 0) {
+          playTrack(tracks[0], tracks, null);
+        }
+        setIsTheaterMode(!isTheaterMode);
+        return;
+      }
       if (e.key === 'ArrowRight' && duration > 0) {
         e.preventDefault();
         seek(Math.min(duration, currentTime + 5));
@@ -209,6 +228,10 @@ const SpotifyShell: React.FC = () => {
   }, [
     isShortcutsOpen,
     setIsShortcutsOpen,
+    isTheaterMode,
+    setIsTheaterMode,
+    tracks,
+    playTrack,
     duration,
     currentTime,
     seek,
@@ -223,6 +246,27 @@ const SpotifyShell: React.FC = () => {
     settings.zoomLevel,
     updateAudioSettings,
   ]);
+
+  const lyricsOffset = currentTrack?.lyricsOffsetSec || 0;
+  const effectiveLyricsTime = currentTime + lyricsOffset;
+
+  const theaterActiveLyricIdx = (() => {
+    if (!currentTrack?.lyrics?.length) return -1;
+    const lyrics = currentTrack.lyrics;
+    for (let i = 0; i < lyrics.length; i++) {
+      const line = lyrics[i];
+      if (line.time < 0) continue;
+      const nextSynced = lyrics.slice(i + 1).find(l => l.time >= 0)?.time ?? Infinity;
+      if (effectiveLyricsTime >= line.time && effectiveLyricsTime < nextSynced) return i;
+    }
+    return -1;
+  })();
+
+  useEffect(() => {
+    if (isTheaterMode && theaterTab === 'lyrics' && theaterActiveLyricIdx >= 0) {
+      theaterLyricRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isTheaterMode, theaterTab, theaterActiveLyricIdx]);
 
   const formatTime = (sec: number) => {
     if (!Number.isFinite(sec) || sec < 0) return '0:00';
@@ -895,9 +939,45 @@ const SpotifyShell: React.FC = () => {
       )}
 
       {/* Fullscreen Theater Mode Overlay */}
+      {isTheaterMode && !currentTrack && (
+        <div className="fixed inset-0 z-50 flex flex-col justify-between p-8 md:p-14 select-none bg-[#09090b] text-white">
+          <div className="flex items-center justify-between relative z-10">
+            <div className="flex items-center gap-2 text-white/80">
+              <SpotifyLogoIcon size={28} className="text-white" />
+              <ShinyText text="Theater Mode" className="font-bold text-sm tracking-wide uppercase" />
+            </div>
+            <button
+              onClick={() => setIsTheaterMode(false)}
+              title="Exit Full Screen (Esc)"
+              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+            >
+              <Minimize2 size={18} />
+            </button>
+          </div>
+          <div className="flex flex-col items-center justify-center text-center my-auto space-y-4">
+            <Music size={64} className="text-spotify-muted animate-pulse" />
+            <h2 className="text-2xl font-bold text-white">No Track Currently Playing</h2>
+            <p className="text-sm text-spotify-muted max-w-md">
+              Start playing a song from your library to experience dynamic Aurora visuals, audio wave visualizers, and synced karaoke lyrics in Theater Mode.
+            </p>
+            {tracks.length > 0 && (
+              <button
+                onClick={() => playTrack(tracks[0], tracks, null)}
+                className="px-6 py-2.5 rounded-full bg-spotify-green hover:bg-spotify-green-hover text-black font-bold text-sm transition-transform hover:scale-105 cursor-pointer shadow-lg"
+              >
+                Play First Track
+              </button>
+            )}
+          </div>
+          <div className="text-center text-xs text-white/40">
+            Press <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px]">Esc</kbd> or <kbd className="px-1.5 py-0.5 rounded bg-white/10 font-mono text-[10px]">F</kbd> to exit Theater Mode
+          </div>
+        </div>
+      )}
+
       {isTheaterMode && currentTrack && (
         <div
-          className="fixed inset-0 z-50 flex flex-col justify-between p-8 md:p-14 select-none overflow-hidden"
+          className="fixed inset-0 z-50 flex flex-col justify-between p-6 md:p-10 select-none overflow-hidden"
           style={{
             background: settings.amoledMode
               ? '#000000'
@@ -916,69 +996,224 @@ const SpotifyShell: React.FC = () => {
               className="opacity-45"
             />
           )}
-          <div className="flex items-center justify-between relative z-10">
+
+          {/* Top Header Bar */}
+          <div className="flex items-center justify-between relative z-10 gap-4">
             <div className="flex items-center gap-2 text-white/80">
               <SpotifyLogoIcon size={28} className="text-white" />
-              <ShinyText text="Now Playing" className="font-bold text-sm tracking-wide uppercase" />
+              <ShinyText text="Theater Mode" className="font-bold text-sm tracking-wide uppercase" />
             </div>
-            <button
-              onClick={() => setIsTheaterMode(false)}
-              title="Exit Full Screen"
-              className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer"
-            >
-              <Minimize2 size={18} />
-            </button>
+
+            {/* Mode Switcher: Cover Art vs Karaoke Synced Lyrics */}
+            <div className="flex items-center bg-black/40 backdrop-blur-md p-1 rounded-full border border-white/10 gap-1 text-xs font-semibold">
+              <button
+                onClick={() => setTheaterTab('art')}
+                className={`px-3 py-1 rounded-full transition-all cursor-pointer ${
+                  theaterTab === 'art'
+                    ? 'bg-white text-black shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                Cover Art
+              </button>
+              <button
+                onClick={() => setTheaterTab('lyrics')}
+                className={`px-3 py-1 rounded-full transition-all cursor-pointer flex items-center gap-1.5 ${
+                  theaterTab === 'lyrics'
+                    ? 'bg-white text-black shadow-md'
+                    : 'text-white/70 hover:text-white'
+                }`}
+              >
+                <Mic2 size={13} />
+                <span>Lyrics</span>
+              </button>
+            </div>
+
+            {/* Right Controls: Visualizer Style Pill + Keyboard Hint + Exit */}
+            <div className="flex items-center gap-2.5">
+              <div className="hidden sm:flex items-center bg-black/30 backdrop-blur-sm rounded-full p-1 border border-white/10 text-[11px] font-medium text-white/70">
+                {(['bars', 'fluid', 'waveform'] as const).map(style => (
+                  <button
+                    key={style}
+                    onClick={() => updateAudioSettings({ visualizerStyle: style })}
+                    className={`px-2.5 py-0.5 rounded-full capitalize transition-colors cursor-pointer ${
+                      (settings.visualizerStyle || 'bars') === style
+                        ? 'bg-spotify-green text-black font-bold'
+                        : 'hover:text-white'
+                    }`}
+                  >
+                    {style}
+                  </button>
+                ))}
+              </div>
+
+              <div className="hidden md:block text-[11px] text-white/50 bg-black/30 px-2.5 py-1 rounded-full border border-white/10">
+                Press <kbd className="font-mono text-white/80 font-bold">Esc</kbd> or <kbd className="font-mono text-white/80 font-bold">F</kbd>
+              </div>
+
+              <button
+                onClick={() => setIsTheaterMode(false)}
+                title="Exit Full Screen (Esc)"
+                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center cursor-pointer transition-colors"
+              >
+                <Minimize2 size={18} />
+              </button>
+            </div>
           </div>
 
-          <div className="flex flex-col md:flex-row items-center gap-10 max-w-5xl mx-auto w-full my-auto relative z-10">
-            <TiltedCard
-              rotateAmplitude={8}
-              scaleOnHover={1.03}
-              className="w-64 h-64 md:w-80 md:h-80 rounded-xl bg-[#282828] flex items-center justify-center overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.75)]"
-            >
-              {currentTrack.coverUrl ? (
-                <img
-                  src={currentTrack.coverUrl}
-                  alt={currentTrack.title}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <Music size={80} className="text-spotify-muted" />
-              )}
-            </TiltedCard>
-            <div className="text-center md:text-left min-w-0 flex-1">
-              <h1 className="text-3xl md:text-6xl font-bold text-white tracking-tight mb-3">
-                <BlurText text={currentTrack.title} />
-              </h1>
-              <p className="text-xl md:text-2xl text-white/75 font-medium mb-8">
-                {currentTrack.artist} • {currentTrack.album}
-              </p>
-              <div className="flex items-center justify-center md:justify-start gap-6">
-                <button
-                  onClick={prevTrack}
-                  className="p-2 text-white/80 hover:text-white cursor-pointer"
-                >
-                  <SkipBackIcon size={24} />
-                </button>
-                <ClickSpark sparkColor={activeAccentColor}>
+          {/* Center Main Stage */}
+          {theaterTab === 'art' ? (
+            <div className="flex flex-col md:flex-row items-center gap-8 md:gap-14 max-w-5xl mx-auto w-full my-auto relative z-10 px-4">
+              <TiltedCard
+                rotateAmplitude={8}
+                scaleOnHover={1.03}
+                className="w-56 h-56 sm:w-72 sm:h-72 md:w-88 md:h-88 rounded-2xl bg-[#282828] flex items-center justify-center overflow-hidden shadow-[0_25px_70px_rgba(0,0,0,0.85)] shrink-0 border border-white/10"
+              >
+                {currentTrack.coverUrl ? (
+                  <img
+                    src={currentTrack.coverUrl}
+                    alt={currentTrack.title}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <Music size={80} className="text-spotify-muted" />
+                )}
+              </TiltedCard>
+
+              <div className="text-center md:text-left min-w-0 flex-1 w-full max-w-xl">
+                <h1 className="text-3xl sm:text-4xl md:text-6xl font-extrabold text-white tracking-tight mb-2 truncate">
+                  <BlurText text={currentTrack.title} />
+                </h1>
+                <p className="text-lg sm:text-xl md:text-2xl text-white/80 font-medium mb-6 truncate">
+                  {currentTrack.artist} • {currentTrack.album}
+                </p>
+
+                {/* Scrubber Progress Bar */}
+                <div className="w-full flex items-center gap-3 text-xs text-white/70 font-mono mb-6">
+                  <span className="w-10 text-right tabular-nums">{formatTime(displayTime)}</span>
+                  <div className="flex-1 relative flex items-center group cursor-pointer h-4">
+                    <input
+                      type="range"
+                      min={0}
+                      max={duration > 0 ? duration : 100}
+                      step={0.1}
+                      value={displayTime}
+                      onChange={e => seek(Number(e.target.value))}
+                      className="w-full h-1.5 bg-white/20 rounded-full appearance-none cursor-pointer accent-spotify-green hover:h-2 transition-all"
+                    />
+                  </div>
+                  <span className="w-10 text-left tabular-nums">{formatTime(duration)}</span>
+                </div>
+
+                {/* Playback Controls */}
+                <div className="flex items-center justify-center md:justify-start gap-6">
                   <button
-                    onClick={togglePlay}
-                    className="w-16 h-16 rounded-full bg-white text-black hover:scale-105 transition-transform flex items-center justify-center shadow-2xl cursor-pointer"
+                    onClick={toggleShuffle}
+                    title="Toggle Shuffle"
+                    className={`p-2 transition-colors cursor-pointer relative ${
+                      isShuffle ? 'text-spotify-green' : 'text-white/60 hover:text-white'
+                    }`}
                   >
-                    {isPlaying ? <Pause16Icon size={24} /> : <Play16Icon size={24} className="ml-1" />}
+                    <ShuffleIcon size={22} />
+                    {isShuffle && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2" />
+                    )}
                   </button>
-                </ClickSpark>
-                <button
-                  onClick={() => nextTrack()}
-                  className="p-2 text-white/80 hover:text-white cursor-pointer"
-                >
-                  <SkipForwardIcon size={24} />
-                </button>
+
+                  <button
+                    onClick={prevTrack}
+                    title="Previous track"
+                    className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform cursor-pointer"
+                  >
+                    <SkipBackIcon size={26} />
+                  </button>
+
+                  <ClickSpark sparkColor={activeAccentColor}>
+                    <button
+                      onClick={togglePlay}
+                      title={isPlaying ? 'Pause' : 'Play'}
+                      className="w-16 h-16 rounded-full bg-white text-black hover:scale-106 active:scale-95 transition-transform flex items-center justify-center shadow-2xl cursor-pointer"
+                    >
+                      {isPlaying ? <Pause16Icon size={26} /> : <Play16Icon size={26} className="ml-1" />}
+                    </button>
+                  </ClickSpark>
+
+                  <button
+                    onClick={() => nextTrack()}
+                    title="Next track"
+                    className="p-2 text-white/80 hover:text-white hover:scale-110 transition-transform cursor-pointer"
+                  >
+                    <SkipForwardIcon size={26} />
+                  </button>
+
+                  <button
+                    onClick={cycleRepeat}
+                    title="Cycle Repeat"
+                    className={`p-2 transition-colors cursor-pointer relative ${
+                      repeatMode !== 'off' ? 'text-spotify-green' : 'text-white/60 hover:text-white'
+                    }`}
+                  >
+                    <RepeatIcon size={22} />
+                    {repeatMode !== 'off' && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-spotify-green absolute bottom-0 left-1/2 -translate-x-1/2" />
+                    )}
+                    {repeatMode === 'one' && (
+                      <span className="text-[10px] font-bold absolute -top-1 -right-1 text-spotify-green">
+                        1
+                      </span>
+                    )}
+                  </button>
+                </div>
               </div>
             </div>
-          </div>
+          ) : (
+            /* Synced Karaoke Lyrics View in Theater Mode */
+            <div className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-6 text-center select-text no-scrollbar max-h-[60vh]">
+              {currentTrack.lyrics && currentTrack.lyrics.length > 0 ? (
+                currentTrack.lyrics.map((line, idx) => {
+                  const isActive = idx === theaterActiveLyricIdx;
+                  return (
+                    <p
+                      key={idx}
+                      ref={isActive ? theaterLyricRef : null}
+                      onClick={() => {
+                        if (line.time >= 0) seek(line.time);
+                      }}
+                      className={`text-2xl sm:text-3xl md:text-5xl font-extrabold transition-all duration-300 cursor-pointer ${
+                        isActive
+                          ? 'text-white scale-105 opacity-100 drop-shadow-[0_0_24px_rgba(255,255,255,0.7)]'
+                          : 'text-white/35 hover:text-white/70 scale-100'
+                      }`}
+                      style={
+                        isActive && currentTrack.accentColor
+                          ? { textShadow: `0 0 30px ${currentTrack.accentColor}cc` }
+                          : undefined
+                      }
+                    >
+                      {line.text || '♪'}
+                    </p>
+                  );
+                })
+              ) : (
+                <div className="py-16 space-y-4">
+                  <Mic2 size={48} className="mx-auto text-spotify-muted" />
+                  <p className="text-xl font-bold text-white">No Synced Lyrics Available</p>
+                  <p className="text-sm text-spotify-muted">
+                    Switch back to Cover Art view or fetch lyrics online in the main view.
+                  </p>
+                  <button
+                    onClick={() => setTheaterTab('art')}
+                    className="px-5 py-2 rounded-full bg-white text-black font-bold text-xs hover:scale-105 cursor-pointer"
+                  >
+                    View Album Cover
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
 
-          <div className="relative z-10">
+          {/* Bottom Audio Visualizer Bar */}
+          <div className="relative z-10 w-full max-w-4xl mx-auto pt-4">
             {settings.showVisualizer !== false && (
               <TheaterVisualizer accentColor={currentTrack.accentColor} />
             )}

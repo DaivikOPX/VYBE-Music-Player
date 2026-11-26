@@ -21,6 +21,7 @@ import {
   Folder,
   Edit2,
   FileAudio,
+  FolderTree,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -31,7 +32,7 @@ import {
   CreateFolderMenuIcon,
 } from './SpotifyIcons';
 
-type LibraryFilter = 'all' | 'playlists' | 'artists' | 'albums';
+type LibraryFilter = 'all' | 'playlists' | 'artists' | 'albums' | 'folders';
 type SortMode = 'recents' | 'recently-added' | 'alphabetical' | 'creator';
 type SidebarViewMode = 'compact' | 'list' | 'grid' | 'large-grid';
 
@@ -435,6 +436,22 @@ export const Sidebar: React.FC = () => {
                         </div>
                       </button>
 
+                      <button
+                        onClick={() => {
+                          navigate({ name: 'folder-tree' });
+                          setCreateMenuOpen(false);
+                        }}
+                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                      >
+                        <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                          <FolderTree size={20} />
+                        </div>
+                        <div>
+                          <p className="font-bold text-[14px] text-white">Folder Tree Explorer</p>
+                          <p className="text-[12px] text-spotify-muted">Browse directory hierarchy</p>
+                        </div>
+                      </button>
+
                       <div className="my-1 border-t border-white/10" />
 
                       <button
@@ -492,14 +509,20 @@ export const Sidebar: React.FC = () => {
                   <X size={14} />
                 </button>
               )}
-              {(['playlists', 'artists', 'albums'] as const).map(f => {
-                const label = f === 'playlists' ? 'Playlists' : f === 'artists' ? 'Artists' : 'Albums';
+              {(['playlists', 'artists', 'albums', 'folders'] as const).map(f => {
+                const label =
+                  f === 'playlists' ? 'Playlists' : f === 'artists' ? 'Artists' : f === 'albums' ? 'Albums' : 'Folders';
                 const active = activeFilter === f;
                 if (activeFilter !== 'all' && !active) return null;
                 return (
                   <button
                     key={f}
-                    onClick={() => setActiveFilter(active ? 'all' : f)}
+                    onClick={() => {
+                      if (f === 'folders') {
+                        navigate({ name: 'folder-tree' });
+                      }
+                      setActiveFilter(active ? 'all' : f);
+                    }}
                     className={`px-3 py-1.5 rounded-full text-[12px] font-medium transition-colors whitespace-nowrap cursor-pointer ${
                       active
                         ? 'bg-white text-black font-semibold'

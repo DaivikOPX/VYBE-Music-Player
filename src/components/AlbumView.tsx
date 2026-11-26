@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { Clock, Disc3, Heart, ListPlus } from 'lucide-react';
+import { Clock, Disc3, Heart, ListPlus, Sparkles } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { Track } from '../types';
 import { TrackRow } from './TrackRow';
 import { BatchMetadataForm } from './BatchMetadataForm';
+import { CoverArtModal } from './CoverArtModal';
 import { PlayTriangleIcon, Pause16Icon, ShuffleIcon } from './SpotifyIcons';
 import { TiltedCard, BlurText, ShinyText, ClickSpark } from './reactbits';
 
@@ -33,6 +34,7 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
 
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [isCoverModalOpen, setIsCoverModalOpen] = useState(false);
 
   const album =
     albums.find(
@@ -187,6 +189,15 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
             <Heart size={24} className={isSavedAlbum ? 'fill-spotify-green' : ''} />
           </button>
 
+          <button
+            onClick={() => setIsCoverModalOpen(true)}
+            title="Search and apply album cover artwork online"
+            className="px-3.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors"
+          >
+            <Sparkles size={14} className="text-spotify-green" />
+            <span>Find Artwork</span>
+          </button>
+
           {albumTracks.length > 0 && (
             <button
               onClick={() => {
@@ -278,6 +289,14 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
             />
           ))}
         </div>
+
+        <CoverArtModal
+          isOpen={isCoverModalOpen}
+          onClose={() => setIsCoverModalOpen(false)}
+          tracks={albumTracks}
+          initialArtist={album.artist}
+          initialAlbum={album.name}
+        />
       </div>
     </div>
   );

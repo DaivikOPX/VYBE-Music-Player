@@ -59,6 +59,10 @@ export const TopNav: React.FC = () => {
     setHazyBlur,
     profile,
     showToast,
+    setIsTheaterMode,
+    currentTrack,
+    tracks,
+    playTrack,
   } = usePlayer();
 
   const [menuOpen, setMenuOpen] = useState<'app' | 'profile' | 'hazy' | null>(null);
@@ -387,6 +391,30 @@ export const TopNav: React.FC = () => {
                     >
                       <span>Full Screen</span>
                       <span className="text-[11px] text-white/40">F11</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (!currentTrack && tracks.length > 0) {
+                          playTrack(tracks[0], tracks, null);
+                        }
+                        setIsTheaterMode(true);
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-spotify-green hover:text-spotify-green font-medium"
+                    >
+                      <span>Theater Mode (Visualizer)</span>
+                      <span className="text-[11px] text-white/40">F</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        navigate({ name: 'folder-tree' });
+                        setMenuOpen(null);
+                        setActiveSubmenu(null);
+                      }}
+                      className="w-full px-3.5 py-1.5 text-left hover:bg-white/10 flex items-center justify-between cursor-pointer text-[#d1d1d1] hover:text-white"
+                    >
+                      <span>Folder Tree Explorer</span>
                     </button>
                     <div className="my-1 border-t border-white/10" />
                     <button

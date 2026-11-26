@@ -93,6 +93,7 @@ export type ViewRoute =
   | { name: 'most-played' }
   | { name: 'stats' }
   | { name: 'profile' }
+  | { name: 'folder-tree' }
   | { name: 'settings' };
 
 export interface SmartRuleConfig {

@@ -57,8 +57,11 @@ export const PlayerBar: React.FC = () => {
     selectAudioOutputDevice,
     isMiniplayer,
     setIsMiniplayer,
+    isTheaterMode,
     setIsTheaterMode,
     setIsMobilePlayerOpen,
+    tracks,
+    playTrack,
     settings,
     abLoop,
     sleepRemainingSec,
@@ -675,10 +678,16 @@ export const PlayerBar: React.FC = () => {
           </button>
 
           <button
-            onClick={() => setIsTheaterMode(true)}
-            disabled={!hasTrack}
-            title="Full screen"
-            className="p-1.5 text-spotify-muted hover:text-white transition-colors cursor-pointer disabled:opacity-40"
+            onClick={() => {
+              if (!hasTrack && tracks.length > 0) {
+                playTrack(tracks[0], tracks, null);
+              }
+              setIsTheaterMode(true);
+            }}
+            title="Theater Mode / Full screen (F)"
+            className={`p-1.5 transition-colors cursor-pointer ${
+              isTheaterMode ? 'text-spotify-green' : 'text-spotify-muted hover:text-white'
+            }`}
           >
             <FullscreenIcon size={16} />
           </button>

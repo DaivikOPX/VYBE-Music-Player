@@ -291,6 +291,58 @@ async function parseAudioFileMeta(filePath) {
       }
       coverUrl = `local-art://cover/${artName}`;
     }
+
+    // Fallback: If no embedded cover, check for album art files in the local directory (cover.jpg, folder.jpg, front.jpg, etc.)
+    if (!coverUrl) {
+      try {
+        const fileDir = path.dirname(normalizedPath);
+        const candidates = [
+          'cover.jpg', 'cover.jpeg', 'cover.png', 'cover.webp',
+          'folder.jpg', 'folder.jpeg', 'folder.png', 'folder.webp',
+          'front.jpg', 'front.jpeg', 'front.png', 'front.webp',
+          'album.jpg', 'album.jpeg', 'album.png', 'album.webp',
+          'artwork.jpg', 'artwork.jpeg', 'artwork.png', 'artwork.webp',
+          `${base}.jpg`, `${base}.jpeg`, `${base}.png`, `${base}.webp`
+        ];
+        for (const cand of candidates) {
+          const candPath = path.join(fileDir, cand);
+          if (fs.existsSync(candPath)) {
+            const imgData = fs.readFileSync(candPath);
+            if (imgData && imgData.length > 512) {
+              const artHash = crypto.createHash('sha1').update(imgData).digest('hex').slice(0, 20);
+              const artExt = path.extname(cand).toLowerCase() || '.jpg';
+              const artName = `${artHash}${artExt}`;
+              const artFile = path.join(getArtCacheDir(), artName);
+              if (!fs.existsSync(artFile)) {
+                fs.writeFileSync(artFile, imgData);
+              }
+              coverUrl = `local-art://cover/${artName}`;
+              break;
+            }
+          }
+        }
+        if (!coverUrl) {
+          const dirEntries = fs.readdirSync(fileDir);
+          const imgEntries = dirEntries.filter(f => /\.(jpe?g|png|webp|bmp)$/i.test(f));
+          if (imgEntries.length === 1) {
+            const candPath = path.join(fileDir, imgEntries[0]);
+            const imgData = fs.readFileSync(candPath);
+            if (imgData && imgData.length > 512) {
+              const artHash = crypto.createHash('sha1').update(imgData).digest('hex').slice(0, 20);
+              const artExt = path.extname(imgEntries[0]).toLowerCase() || '.jpg';
+              const artName = `${artHash}${artExt}`;
+              const artFile = path.join(getArtCacheDir(), artName);
+              if (!fs.existsSync(artFile)) {
+                fs.writeFileSync(artFile, imgData);
+              }
+              coverUrl = `local-art://cover/${artName}`;
+            }
+          }
+        }
+      } catch {
+        // ignore
+      }
+    }
   } catch {
     // Fallback cleanly to filename metadata
   }
@@ -916,6 +968,63 @@ app.whenReady().then(() => {
     } catch (err) {
       console.error('Error writing ID3 tags on disk:', err);
       return { success: false, error: String(err?.message || err) };
+    }
+  });
+
+  // Find local folder artwork on demand for a given audio file path
+  ipcMain.handle('media:findLocalCover', async (_e, filePath) => {
+    try {
+      if (!filePath || typeof filePath !== 'string' || !fs.existsSync(filePath)) return null;
+      const fileDir = path.dirname(filePath);
+      const fileName = path.basename(filePath);
+      const ext = path.extname(fileName);
+      const base = fileName.slice(0, fileName.length - ext.length).trim();
+
+      const candidates = [
+        'cover.jpg', 'cover.jpeg', 'cover.png', 'cover.webp',
+        'folder.jpg', 'folder.jpeg', 'folder.png', 'folder.webp',
+        'front.jpg', 'front.jpeg', 'front.png', 'front.webp',
+        'album.jpg', 'album.jpeg', 'album.png', 'album.webp',
+        'artwork.jpg', 'artwork.jpeg', 'artwork.png', 'artwork.webp',
+        `${base}.jpg`, `${base}.jpeg`, `${base}.png`, `${base}.webp`
+      ];
+
+      for (const cand of candidates) {
+        const candPath = path.join(fileDir, cand);
+        if (fs.existsSync(candPath)) {
+          const imgData = fs.readFileSync(candPath);
+          if (imgData && imgData.length > 512) {
+            const artHash = crypto.createHash('sha1').update(imgData).digest('hex').slice(0, 20);
+            const artExt = path.extname(cand).toLowerCase() || '.jpg';
+            const artName = `${artHash}${artExt}`;
+            const artFile = path.join(getArtCacheDir(), artName);
+            if (!fs.existsSync(artFile)) {
+              fs.writeFileSync(artFile, imgData);
+            }
+            return `local-art://cover/${artName}`;
+          }
+        }
+      }
+
+      const dirEntries = fs.readdirSync(fileDir);
+      const imgEntries = dirEntries.filter(f => /\.(jpe?g|png|webp|bmp)$/i.test(f));
+      if (imgEntries.length === 1) {
+        const candPath = path.join(fileDir, imgEntries[0]);
+        const imgData = fs.readFileSync(candPath);
+        if (imgData && imgData.length > 512) {
+          const artHash = crypto.createHash('sha1').update(imgData).digest('hex').slice(0, 20);
+          const artExt = path.extname(imgEntries[0]).toLowerCase() || '.jpg';
+          const artName = `${artHash}${artExt}`;
+          const artFile = path.join(getArtCacheDir(), artName);
+          if (!fs.existsSync(artFile)) {
+            fs.writeFileSync(artFile, imgData);
+          }
+          return `local-art://cover/${artName}`;
+        }
+      }
+      return null;
+    } catch {
+      return null;
     }
   });
 

@@ -102,17 +102,29 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
           background: `linear-gradient(to bottom, ${album.accentColor || '#334155'}, ${baseBg}dd)`,
         }}
       >
-        <TiltedCard
-          rotateAmplitude={9}
-          scaleOnHover={1.02}
-          className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 shrink-0 shadow-[0_8px_40px_rgba(0,0,0,0.6)] rounded-md overflow-hidden bg-[#282828] flex items-center justify-center"
+        <div
+          onClick={() => setIsCoverModalOpen(true)}
+          className="cursor-pointer group relative"
+          title="Click to search and update album artwork"
         >
-          {album.coverUrl ? (
-            <img src={album.coverUrl} alt={album.name} className="w-full h-full object-cover" />
-          ) : (
-            <Disc3 size={64} className="text-spotify-muted" />
-          )}
-        </TiltedCard>
+          <TiltedCard
+            rotateAmplitude={9}
+            scaleOnHover={1.02}
+            className="w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 shrink-0 shadow-[0_8px_40px_rgba(0,0,0,0.6)] rounded-md overflow-hidden bg-[#282828] flex items-center justify-center relative"
+          >
+            {album.coverUrl ? (
+              <img src={album.coverUrl} alt={album.name} className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center justify-center gap-2 text-spotify-muted group-hover:text-white transition-colors">
+                <Disc3 size={54} />
+                <span className="text-[11px] font-semibold text-center px-2">Find Artwork</span>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+              <Sparkles size={24} className="text-white drop-shadow" />
+            </div>
+          </TiltedCard>
+        </div>
 
         <div className="flex-1 min-w-0 text-center sm:text-left">
           <ShinyText text="Album" className="text-xs font-bold uppercase tracking-wider" />

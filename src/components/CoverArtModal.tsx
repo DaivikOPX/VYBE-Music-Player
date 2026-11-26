@@ -54,7 +54,7 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
       const res = await fetchOnlineCoverArt({
         artist: artName,
         album: albName,
-        title: tracks.length === 1 ? tracks[0]?.title : undefined,
+        title: tracks[0]?.title || undefined,
       });
       if (res) {
         setMatch(res);
@@ -188,7 +188,7 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
               </div>
               <div className="min-w-0 flex-1 space-y-1">
                 <span className="inline-block text-[10px] font-bold tracking-wider uppercase text-spotify-green bg-spotify-green/10 px-2 py-0.5 rounded-full border border-spotify-green/20">
-                  {match.source === 'itunes' ? 'Apple Music / iTunes (600px)' : 'Cover Art Archive'}
+                  {match.source === 'itunes' ? 'Apple Music / iTunes (1000px HD)' : 'Cover Art Archive'}
                 </span>
                 <h4 className="font-bold text-sm text-white truncate">{match.albumName}</h4>
                 <p className="text-xs text-spotify-muted truncate">{match.artistName}</p>

@@ -25,6 +25,7 @@ import {
   DEFAULT_ACCENT_PALETTE
 } from '../utils/colorExtract';
 import { fetchOnlineLyrics, clearLyricsCacheForTrack } from '../utils/lyricsService';
+import { fetchOnlineCoverArt } from '../utils/coverArtService';
 import { matchM3uTracks } from '../utils/playlistUtils';
 import {
   loadPersistedState,
@@ -271,6 +272,9 @@ interface PlayerContextType {
   toggleTrackExplicit: (trackId: string) => void;
   renameTrackFile: (trackId: string, newTitle: string) => Promise<boolean>;
   updateTrackLyrics: (trackId: string, lyrics: LyricLine[], offsetSec?: number) => void;
+  fetchCoverForTrack: (track: Track, force?: boolean) => Promise<string | null>;
+  fetchMissingCoversBatch: (onProgress?: (done: number, total: number, found: number) => void) => Promise<{ found: number; total: number }>;
+  isFetchingCovers: boolean;
   checkMissingFiles: () => Promise<number>;
   removeMissingTracks: () => void;
   addCustomSmartRule: (rule: Omit<SmartRuleConfig, 'id'>) => SmartRuleConfig;
@@ -374,6 +378,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     deckIdx: 0 | 1;
   } | null>(null);
   const lyricsFetchAttemptedRef = useRef<Set<string>>(new Set());
+  const coverFetchAttemptedRef = useRef<Set<string>>(new Set());
+  const [isFetchingCovers, setIsFetchingCovers] = useState(false);
 
   const tracksRef = useRef<Track[]>([]);
   const playlistsRef = useRef<Playlist[]>(INITIAL_PLAYLISTS);
@@ -2006,6 +2012,121 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     void fetchLyricsForTrack(currentTrack, false);
   }, [currentTrack?.id, currentTrack?.lyrics?.length, settings.lyricsSource, fetchLyricsForTrack]);
 
+  // Fetch cover art for a track (local folder image fallback -> online high-res search)
+  const fetchCoverForTrack = useCallback(
+    async (track: Track, force = false): Promise<string | null> => {
+      if (!track || (!force && coverFetchAttemptedRef.current.has(track.id))) {
+        return null;
+      }
+      coverFetchAttemptedRef.current.add(track.id);
+
+      // 1. If running in Electron desktop, check adjacent folder for cover.jpg / folder.jpg / etc.
+      if (
+        window.electronAPI?.findLocalCover &&
+        track.sourceKey &&
+        !track.sourceKey.startsWith('blob:') &&
+        !track.sourceKey.startsWith('http')
+      ) {
+        try {
+          const localCover = await window.electronAPI.findLocalCover(track.sourceKey);
+          if (localCover) {
+            updateTrackMetadata([track.id], { coverUrl: localCover });
+            return localCover;
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // 2. Query online (Apple Music / iTunes -> MusicBrainz) with smart sanitization
+      try {
+        const match = await fetchOnlineCoverArt({
+          artist: track.artist,
+          album: track.album,
+          title: track.title,
+        });
+        if (match?.coverUrl) {
+          updateTrackMetadata([track.id], { coverUrl: match.coverUrl });
+          return match.coverUrl;
+        }
+      } catch (err) {
+        console.warn('Cover art fetch error for track:', track.title, err);
+      }
+      return null;
+    },
+    [updateTrackMetadata]
+  );
+
+  // Auto-fetch missing cover art for the currently playing track immediately
+  useEffect(() => {
+    if (!currentTrack) return;
+    if (currentTrack.coverUrl) return;
+    if (coverFetchAttemptedRef.current.has(currentTrack.id)) return;
+    void fetchCoverForTrack(currentTrack, false);
+  }, [currentTrack?.id, currentTrack?.coverUrl, fetchCoverForTrack]);
+
+  // Gentle background worker that auto-pulls missing covers across the library
+  useEffect(() => {
+    let cancelled = false;
+    const missing = tracks.filter(t => !t.coverUrl && !coverFetchAttemptedRef.current.has(t.id));
+    if (missing.length === 0) return;
+
+    const timer = setTimeout(async () => {
+      // Process in batches of 2 with spacing
+      for (let i = 0; i < missing.length; i += 2) {
+        if (cancelled) break;
+        const slice = missing.slice(i, i + 2);
+        await Promise.allSettled(slice.map(t => fetchCoverForTrack(t, false)));
+        await new Promise(r => setTimeout(r, 200));
+      }
+    }, 1500);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [tracks, fetchCoverForTrack]);
+
+  // Batch cover fetcher triggered on-demand with live progress callback
+  const fetchMissingCoversBatch = useCallback(
+    async (
+      onProgress?: (done: number, total: number, found: number) => void
+    ): Promise<{ found: number; total: number }> => {
+      const missing = tracksRef.current.filter(t => !t.coverUrl);
+      if (missing.length === 0) {
+        showToast('All tracks already have album artwork loaded!');
+        return { found: 0, total: 0 };
+      }
+
+      setIsFetchingCovers(true);
+      let foundCount = 0;
+      let doneCount = 0;
+      const total = missing.length;
+
+      try {
+        for (let i = 0; i < missing.length; i += 2) {
+          const chunk = missing.slice(i, i + 2);
+          await Promise.allSettled(
+            chunk.map(async t => {
+              coverFetchAttemptedRef.current.delete(t.id);
+              const url = await fetchCoverForTrack(t, true);
+              if (url) foundCount++;
+              doneCount++;
+              onProgress?.(doneCount, total, foundCount);
+              return url;
+            })
+          );
+          await new Promise(r => setTimeout(r, 150));
+        }
+        showToast(`Scan complete: Found ${foundCount} artwork(s) for ${total} tracks!`);
+        return { found: foundCount, total };
+      } finally {
+        setIsFetchingCovers(false);
+      }
+    },
+    [fetchCoverForTrack, showToast]
+  );
+
   const checkMissingFiles = useCallback(async () => {
     if (window.electronAPI?.checkMissingFiles) {
       const paths = tracksRef.current
@@ -3102,6 +3223,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         toggleTrackExplicit,
         renameTrackFile,
         updateTrackLyrics,
+        fetchCoverForTrack,
+        fetchMissingCoversBatch,
+        isFetchingCovers,
         checkMissingFiles,
         removeMissingTracks,
         addCustomSmartRule,

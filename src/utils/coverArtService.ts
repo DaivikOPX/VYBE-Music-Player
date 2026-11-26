@@ -1,7 +1,7 @@
 /**
  * Cover Art Service
  * Fetches high-resolution cover artwork for local music files using public, free APIs:
- * 1. Apple Music / iTunes Search API (fast, 600x600 to 1200x1200, zero keys required)
+ * 1. Apple Music / iTunes Search API (fast, 600x600 to 1000x1000, zero keys required)
  * 2. MusicBrainz / Cover Art Archive (open-source database fallback)
  */
 
@@ -13,24 +13,118 @@ export interface CoverArtMatch {
   source: 'itunes' | 'musicbrainz';
 }
 
+// In-memory cache to prevent duplicate network searches across the app session
+const coverArtCache = new Map<string, CoverArtMatch | null>();
+
 /**
- * Searches online for high-res album art matching an artist and album/track.
+ * Checks if an artist name is generic/missing
+ */
+export function isGenericArtist(artist?: string): boolean {
+  if (!artist) return true;
+  const a = artist.trim().toLowerCase();
+  return (
+    !a ||
+    a === 'unknown artist' ||
+    a === 'unknown' ||
+    a === 'various artists' ||
+    a === 'various' ||
+    a === 'various artist' ||
+    a === 'artist' ||
+    a === 'track'
+  );
+}
+
+/**
+ * Checks if an album name is generic/missing
+ */
+export function isGenericAlbum(album?: string): boolean {
+  if (!album) return true;
+  const a = album.trim().toLowerCase();
+  return (
+    !a ||
+    a === 'local files' ||
+    a === 'unknown album' ||
+    a === 'unknown' ||
+    a === 'music' ||
+    a === 'download' ||
+    a === 'downloads' ||
+    a === 'audio' ||
+    a === 'songs' ||
+    a === 'new folder'
+  );
+}
+
+/**
+ * Strips YouTube/ripped junk, track numbers, and brackets from titles
+ * e.g. "01 - Bohemian Rhapsody (Official Music Video) [HQ]" -> "Bohemian Rhapsody"
+ */
+export function sanitizeTrackTitle(title: string): string {
+  if (!title) return '';
+  let clean = title.trim();
+
+  // Strip file extensions
+  clean = clean.replace(/\.(mp3|flac|wav|m4a|aac|ogg|wma|opus)$/i, '');
+
+  // Strip leading track numbers like "01 - ", "01. ", "01 ", "1 - "
+  clean = clean.replace(/^\s*\d+[\s.-]+/, '');
+
+  // Strip common YouTube / audio tags in parentheses or brackets
+  clean = clean.replace(
+    /\s*[\(\[](?:official\s*(?:video|audio|music\s*video|lyric\s*video|visualizer|mv|hd\s*video)|lyrics?|audio|video|remastered(?:\s*\d{4})?|remaster|hq|hd|4k|1080p|720p|320\s*kbps|bonus\s*track|explicit|clean|radio\s*edit|live\s*(?:at\s*[^)\]]*)?|studio\s*version)[\)\]]/gi,
+    ''
+  );
+
+  // Strip featured artists from title to maximize search match
+  clean = clean.replace(/\s*[\(\[]?(?:feat\.?|ft\.?)\s+[^)\]]+[\)\]]?/gi, '');
+
+  // If title is "Artist - Title", return just Title
+  const dashIdx = clean.indexOf(' - ');
+  if (dashIdx > 0 && dashIdx < clean.length - 3) {
+    clean = clean.slice(dashIdx + 3).trim();
+  }
+
+  // Normalize duplicate spaces without stripping Unicode/accents
+  clean = clean.replace(/\s+/g, ' ').trim();
+  return clean || title.trim();
+}
+
+/**
+ * Cleans query terms preserving Unicode letters, numbers, and accents
+ */
+function cleanQuery(str: string): string {
+  return str
+    .replace(/[<>:"/\\|?*]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Searches online for high-res album art matching an artist, album, or track title.
  */
 export async function fetchOnlineCoverArt(params: {
   artist: string;
   album?: string;
   title?: string;
 }): Promise<CoverArtMatch | null> {
-  const cleanArtist = (params.artist || '').trim();
-  const cleanAlbum = (params.album || '').trim();
-  const cleanTitle = (params.title || '').trim();
+  const rawArtist = (params.artist || '').trim();
+  const rawAlbum = (params.album || '').trim();
+  const rawTitle = (params.title || '').trim();
+
+  const cleanArtist = isGenericArtist(rawArtist) ? '' : rawArtist;
+  const cleanAlbum = isGenericAlbum(rawAlbum) ? '' : rawAlbum;
+  const cleanTitle = sanitizeTrackTitle(rawTitle);
 
   if (!cleanArtist && !cleanAlbum && !cleanTitle) return null;
 
+  const cacheKey = `${cleanArtist.toLowerCase()}::${cleanAlbum.toLowerCase()}::${cleanTitle.toLowerCase()}`;
+  if (coverArtCache.has(cacheKey)) {
+    return coverArtCache.get(cacheKey) || null;
+  }
+
   // 1. Try iTunes Album Search first (most accurate for complete albums)
-  if (cleanArtist && cleanAlbum && cleanAlbum.toLowerCase() !== 'unknown album' && cleanAlbum.toLowerCase() !== 'local files') {
+  if (cleanArtist && cleanAlbum) {
     try {
-      const term = `${cleanArtist} ${cleanAlbum}`.replace(/[^\w\s]/gi, ' ').trim();
+      const term = cleanQuery(`${cleanArtist} ${cleanAlbum}`);
       const res = await fetch(
         `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=album&limit=4`,
         { headers: { Accept: 'application/json' } }
@@ -40,14 +134,16 @@ export async function fetchOnlineCoverArt(params: {
         if (Array.isArray(data.results) && data.results.length > 0) {
           const match = data.results[0];
           if (match.artworkUrl100) {
-            const highResUrl = match.artworkUrl100.replace('100x100bb', '600x600bb');
-            return {
+            const highResUrl = match.artworkUrl100.replace('100x100bb', '1000x1000bb');
+            const result: CoverArtMatch = {
               coverUrl: highResUrl,
               albumName: match.collectionName || cleanAlbum,
               artistName: match.artistName || cleanArtist,
               releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
               source: 'itunes',
             };
+            coverArtCache.set(cacheKey, result);
+            return result;
           }
         }
       }
@@ -56,10 +152,10 @@ export async function fetchOnlineCoverArt(params: {
     }
   }
 
-  // 2. Try iTunes Song / Track Search (great for singles or standalone tracks)
-  if (cleanArtist || cleanTitle) {
+  // 2. Try iTunes Song / Track Search (with artist + title or clean album)
+  if (cleanArtist && (cleanTitle || cleanAlbum)) {
     try {
-      const term = `${cleanArtist} ${cleanTitle || cleanAlbum}`.replace(/[^\w\s]/gi, ' ').trim();
+      const term = cleanQuery(`${cleanArtist} ${cleanTitle || cleanAlbum}`);
       const res = await fetch(
         `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=4`,
         { headers: { Accept: 'application/json' } }
@@ -69,14 +165,16 @@ export async function fetchOnlineCoverArt(params: {
         if (Array.isArray(data.results) && data.results.length > 0) {
           const match = data.results[0];
           if (match.artworkUrl100) {
-            const highResUrl = match.artworkUrl100.replace('100x100bb', '600x600bb');
-            return {
+            const highResUrl = match.artworkUrl100.replace('100x100bb', '1000x1000bb');
+            const result: CoverArtMatch = {
               coverUrl: highResUrl,
               albumName: match.collectionName || cleanAlbum,
               artistName: match.artistName || cleanArtist,
               releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
               source: 'itunes',
             };
+            coverArtCache.set(cacheKey, result);
+            return result;
           }
         }
       }
@@ -85,8 +183,39 @@ export async function fetchOnlineCoverArt(params: {
     }
   }
 
-  // 3. Fallback to MusicBrainz + Cover Art Archive
-  if (cleanAlbum && cleanAlbum.toLowerCase() !== 'unknown album') {
+  // 3. Try iTunes Search by Clean Title alone (handles songs with Unknown Artist or extracted titles)
+  if (cleanTitle) {
+    try {
+      const term = cleanQuery(cleanTitle);
+      const res = await fetch(
+        `https://itunes.apple.com/search?term=${encodeURIComponent(term)}&entity=song&limit=4`,
+        { headers: { Accept: 'application/json' } }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (Array.isArray(data.results) && data.results.length > 0) {
+          const match = data.results[0];
+          if (match.artworkUrl100) {
+            const highResUrl = match.artworkUrl100.replace('100x100bb', '1000x1000bb');
+            const result: CoverArtMatch = {
+              coverUrl: highResUrl,
+              albumName: match.collectionName || cleanAlbum || match.trackName,
+              artistName: match.artistName || cleanArtist,
+              releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
+              source: 'itunes',
+            };
+            coverArtCache.set(cacheKey, result);
+            return result;
+          }
+        }
+      }
+    } catch (err) {
+      console.warn('iTunes single title search failed:', err);
+    }
+  }
+
+  // 4. Fallback to MusicBrainz + Cover Art Archive
+  if (cleanAlbum) {
     try {
       const mbQuery = cleanArtist
         ? `release:"${cleanAlbum}" AND artist:"${cleanArtist}"`
@@ -100,15 +229,16 @@ export async function fetchOnlineCoverArt(params: {
         const release = mbData.releases?.[0];
         if (release?.id) {
           const caaUrl = `https://coverartarchive.org/release/${release.id}/front-500`;
-          // Verify CAA image exists
           const check = await fetch(caaUrl, { method: 'HEAD' });
           if (check.ok) {
-            return {
+            const result: CoverArtMatch = {
               coverUrl: caaUrl,
               albumName: release.title || cleanAlbum,
               artistName: release['artist-credit']?.[0]?.name || cleanArtist,
               source: 'musicbrainz',
             };
+            coverArtCache.set(cacheKey, result);
+            return result;
           }
         }
       }
@@ -117,6 +247,7 @@ export async function fetchOnlineCoverArt(params: {
     }
   }
 
+  coverArtCache.set(cacheKey, null);
   return null;
 }
 

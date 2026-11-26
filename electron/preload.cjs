@@ -55,6 +55,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   saveState: (state) => ipcRenderer.invoke('store:save', state),
   showInExplorer: (filePath) => ipcRenderer.send('shell:showInExplorer', filePath),
   writeId3Tags: (filePath, tags) => ipcRenderer.invoke('media:writeId3Tags', filePath, tags),
+  findLocalCover: (filePath) => ipcRenderer.invoke('media:findLocalCover', filePath),
   renameFile: (oldPath, newFileName) => ipcRenderer.invoke('media:renameFile', oldPath, newFileName),
   updatePlayState: (isPlaying, title) => ipcRenderer.send('window:updatePlayState', isPlaying, title),
   setCloseToTray: (enabled) => ipcRenderer.send('window:setCloseToTray', Boolean(enabled)),

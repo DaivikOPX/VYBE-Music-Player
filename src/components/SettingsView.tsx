@@ -16,6 +16,7 @@ import {
   HardDrive,
   Mic2,
   FolderTree,
+  Loader2,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { usePlayer, EQ_BANDS, EQ_PRESETS } from '../context/PlayerContext';
@@ -85,6 +86,8 @@ export const SettingsView: React.FC = () => {
     playlists,
     albums,
     artists,
+    fetchMissingCoversBatch,
+    isFetchingCovers,
     exportLibraryBackup,
     importLibraryBackup,
     clearListeningHistory,
@@ -98,6 +101,7 @@ export const SettingsView: React.FC = () => {
   const [newPresetName, setNewPresetName] = useState('');
   const [storageInfo, setStorageInfo] = useState<{ usedMb: string; quotaMb: string } | null>(null);
   const [isBatchCoverModalOpen, setIsBatchCoverModalOpen] = useState(false);
+  const [scanProgress, setScanProgress] = useState<{ done: number; total: number; found: number } | null>(null);
   const backupInputRef = useRef<HTMLInputElement>(null);
 
   const missingCoverTracks = tracks.filter(t => !t.coverUrl);
@@ -1270,33 +1274,93 @@ export const SettingsView: React.FC = () => {
 
             {/* Missing Album Artwork Scanner Card */}
             <div className="bg-[#181818] border border-white/10 rounded-xl p-4 space-y-3">
-              <div className="flex items-center justify-between gap-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div className="space-y-1">
                   <div className="flex items-center gap-2">
                     <Sparkles size={16} className="text-blue-400" />
-                    <p className="text-sm font-semibold text-white">Album Artwork Scanner</p>
+                    <p className="text-sm font-semibold text-white">Album Artwork Auto-Puller</p>
                   </div>
                   <p className="text-xs text-spotify-muted">
-                    Automatically searches public Apple Music / iTunes and MusicBrainz databases to fetch high-res 600x600 covers and embed them into ID3 tags.
+                    Scans local audio folders for cover files (cover.jpg, folder.jpg) and queries Apple Music & MusicBrainz for crystal-clear 1000x1000 artwork.
                   </p>
                 </div>
-                {missingCoverTracks.length > 0 && (
+                <div className="flex items-center gap-2 shrink-0">
                   <button
-                    onClick={() => setIsBatchCoverModalOpen(true)}
-                    className="px-4 py-2 rounded-full bg-blue-500 hover:bg-blue-400 text-black text-xs font-bold shrink-0 transition-transform hover:scale-105 cursor-pointer"
+                    disabled={isFetchingCovers}
+                    onClick={async () => {
+                      setScanProgress({ done: 0, total: missingCoverTracks.length || tracks.length, found: 0 });
+                      try {
+                        await fetchMissingCoversBatch((done, total, found) => {
+                          setScanProgress({ done, total, found });
+                        });
+                      } finally {
+                        setTimeout(() => setScanProgress(null), 3500);
+                      }
+                    }}
+                    className={`px-4 py-2 rounded-full text-xs font-bold transition-all flex items-center gap-2 cursor-pointer shadow-md ${
+                      isFetchingCovers
+                        ? 'bg-blue-500/50 text-white cursor-not-allowed'
+                        : 'bg-blue-500 hover:bg-blue-400 hover:scale-104 text-black'
+                    }`}
                   >
-                    Fetch Missing Covers ({missingCoverTracks.length})
+                    {isFetchingCovers ? (
+                      <>
+                        <Loader2 size={14} className="animate-spin" />
+                        <span>Scanning Artwork...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Sparkles size={14} />
+                        <span>
+                          {missingCoverTracks.length > 0
+                            ? `Fetch Missing Artwork (${missingCoverTracks.length})`
+                            : 'Re-scan All Artwork'}
+                        </span>
+                      </>
+                    )}
                   </button>
-                )}
+                  {missingCoverTracks.length > 0 && (
+                    <button
+                      onClick={() => setIsBatchCoverModalOpen(true)}
+                      className="px-3 py-2 rounded-full border border-white/15 hover:border-white/30 text-white text-xs font-semibold cursor-pointer transition-colors"
+                      title="Manual album search modal"
+                    >
+                      Manual
+                    </button>
+                  )}
+                </div>
               </div>
+
+              {/* Live Scanning Progress Bar */}
+              {scanProgress && (
+                <div className="space-y-1.5 pt-1 animate-in fade-in duration-200">
+                  <div className="w-full bg-white/10 rounded-full h-2 overflow-hidden">
+                    <div
+                      className="bg-blue-500 h-full transition-all duration-300 rounded-full"
+                      style={{
+                        width: `${Math.max(5, (scanProgress.done / (scanProgress.total || 1)) * 100)}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex justify-between items-center text-[11px] text-white/70">
+                    <span>
+                      Scanned {scanProgress.done} of {scanProgress.total} tracks
+                    </span>
+                    <span className="text-spotify-green font-semibold">
+                      ✓ {scanProgress.found} covers found & applied
+                    </span>
+                  </div>
+                </div>
+              )}
+
               <div className="flex items-center gap-2 pt-1 text-xs">
                 {missingCoverTracks.length === 0 ? (
-                  <span className="text-spotify-green font-medium">
-                    ✓ All {tracks.length} tracks in your library have album artwork loaded.
+                  <span className="text-spotify-green font-medium flex items-center gap-1.5">
+                    <span>✓</span> All {tracks.length} tracks in your library have album artwork loaded.
                   </span>
                 ) : (
-                  <span className="text-amber-400 font-medium">
-                    ⚠️ {missingCoverTracks.length} of {tracks.length} track(s) are missing album artwork.
+                  <span className="text-amber-400 font-medium flex items-center gap-1.5">
+                    <span>⚠️</span> {missingCoverTracks.length} of {tracks.length} track(s) are missing album artwork.
                   </span>
                 )}
               </div>

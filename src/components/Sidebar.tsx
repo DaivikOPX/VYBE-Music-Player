@@ -347,7 +347,7 @@ export const Sidebar: React.FC = () => {
                   ? 'translate-x-0 opacity-100 pointer-events-auto'
                   : '-translate-x-[calc(100%+24px)] opacity-0 pointer-events-none'
               }`
-            : 'flex flex-col h-full transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] shadow-xl'
+            : 'flex flex-col h-full transition-[width] duration-300 ease-[cubic-bezier(0.22,1,0.36,1)] shadow-xl relative z-30'
         } ${
           settings.hazyMode
             ? 'border border-white/10 shadow-2xl'
@@ -387,7 +387,7 @@ export const Sidebar: React.FC = () => {
                   </button>
 
                   {createMenuOpen && (
-                    <div className="absolute left-0 top-10 w-72 bg-[#282828] rounded-lg shadow-2xl border border-white/10 p-1.5 text-sm text-white z-50 animate-in fade-in zoom-in-95 duration-100">
+                    <div className="absolute right-0 top-10 w-72 bg-[#282828] rounded-lg shadow-2xl border border-white/10 p-1.5 text-sm text-white z-50 animate-in fade-in zoom-in-95 duration-100">
                       <button
                         onClick={() => {
                           createPlaylist();

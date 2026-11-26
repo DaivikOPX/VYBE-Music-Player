@@ -133,7 +133,6 @@ export const TopNav: React.FC = () => {
           {menuOpen === 'app' && (
             <div
               className="absolute left-0 top-10 w-48 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50 select-none animate-in fade-in duration-100"
-              onMouseLeave={() => setActiveSubmenu(null)}
             >
               {/* File */}
               <div
@@ -151,7 +150,11 @@ export const TopNav: React.FC = () => {
                 </button>
 
                 {activeSubmenu === 'file' && (
-                  <div className="absolute left-full top-0 ml-1 w-56 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                  <div
+                    onMouseEnter={() => setActiveSubmenu('file')}
+                    className="absolute left-full top-0 -ml-1 pl-1 w-56 z-50"
+                  >
+                    <div className="w-full bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white">
                     <button
                       onClick={() => {
                         void pickNativeAudioFiles();
@@ -211,6 +214,7 @@ export const TopNav: React.FC = () => {
                       <span>Close</span>
                       <span className="text-[11px] text-white/40">Alt+F4</span>
                     </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -231,7 +235,11 @@ export const TopNav: React.FC = () => {
                 </button>
 
                 {activeSubmenu === 'edit' && (
-                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                  <div
+                    onMouseEnter={() => setActiveSubmenu('edit')}
+                    className="absolute left-full top-0 -ml-1 pl-1 w-52 z-50"
+                  >
+                    <div className="w-full bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white">
                     <button
                       onClick={() => {
                         document.execCommand('undo');
@@ -300,6 +308,7 @@ export const TopNav: React.FC = () => {
                       <span>Preferences...</span>
                       <span className="text-[11px] text-white/40">Ctrl+P</span>
                     </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -320,13 +329,16 @@ export const TopNav: React.FC = () => {
                 </button>
 
                 {activeSubmenu === 'view' && (
-                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                  <div
+                    onMouseEnter={() => setActiveSubmenu('view')}
+                    className="absolute left-full top-0 -ml-1 pl-1 w-52 z-50"
+                  >
+                    <div className="w-full bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white">
                     <button
                       onClick={() => {
                         const cur = settings.zoomLevel || 100;
                         const next = Math.min(130, cur + 10);
                         if (next !== cur) {
-                          // update zoom
                           try {
                             const root = document.getElementById('root');
                             if (root) (root.style as any).zoom = `${next}%`;
@@ -405,6 +417,7 @@ export const TopNav: React.FC = () => {
                     >
                       <span>Queue</span>
                     </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -425,7 +438,11 @@ export const TopNav: React.FC = () => {
                 </button>
 
                 {activeSubmenu === 'playback' && (
-                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                  <div
+                    onMouseEnter={() => setActiveSubmenu('playback')}
+                    className="absolute left-full top-0 -ml-1 pl-1 w-52 z-50"
+                  >
+                    <div className="w-full bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white">
                     <button
                       onClick={() => {
                         togglePlay();
@@ -470,6 +487,7 @@ export const TopNav: React.FC = () => {
                       <span>AMOLED Black</span>
                       {settings.amoledMode && <Check size={13} className="text-spotify-green" />}
                     </button>
+                    </div>
                   </div>
                 )}
               </div>
@@ -490,7 +508,11 @@ export const TopNav: React.FC = () => {
                 </button>
 
                 {activeSubmenu === 'help' && (
-                  <div className="absolute left-full top-0 ml-1 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white z-50">
+                  <div
+                    onMouseEnter={() => setActiveSubmenu('help')}
+                    className="absolute left-full top-0 -ml-1 pl-1 w-52 z-50"
+                  >
+                    <div className="w-full bg-[#282828] rounded-md shadow-2xl border border-white/10 py-1 text-[13px] text-white">
                     <button
                       onClick={() => {
                         setIsShortcutsOpen(true);
@@ -512,6 +534,7 @@ export const TopNav: React.FC = () => {
                     >
                       <span>About VYBE</span>
                     </button>
+                    </div>
                   </div>
                 )}
               </div>

@@ -9,7 +9,10 @@ export interface CoverArtMatch {
   coverUrl: string;
   albumName: string;
   artistName: string;
+  trackTitle?: string;
+  genre?: string;
   releaseYear?: number;
+  trackNumber?: number;
   source: 'itunes' | 'musicbrainz';
 }
 
@@ -52,6 +55,40 @@ export function isGenericAlbum(album?: string): boolean {
     a === 'songs' ||
     a === 'new folder'
   );
+}
+
+/**
+ * Checks if a track title is generic, unformatted, or ripped with junk
+ */
+export function isMessyOrGenericTitle(title?: string): boolean {
+  if (!title) return true;
+  const t = title.trim().toLowerCase();
+  if (
+    !t ||
+    t === 'unknown' ||
+    t === 'unknown track' ||
+    t === 'audio' ||
+    t === 'sound' ||
+    t === 'untitled' ||
+    t === 'track' ||
+    /^track\s*\d+$/i.test(t) ||
+    /^\d+[\s.-]+track/i.test(t)
+  ) {
+    return true;
+  }
+  // Check if it ends in raw file extension (.mp3, .flac, etc.)
+  if (/\.(mp3|flac|wav|m4a|aac|ogg|opus)$/i.test(title)) return true;
+  // Check if it starts with track number like "01 - " or "01. "
+  if (/^\d{1,3}[\s.-]+[a-zA-Z]/i.test(title)) return true;
+  // Check if it contains YouTube junk like [Official Video], (Audio), (Lyrics), etc.
+  if (
+    /[\(\[](?:official\s*(?:video|audio|music\s*video|visualizer)|lyric\s*video|lyrics|hd|4k|320\s*kbps)[\)\]]/i.test(
+      title
+    )
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**
@@ -139,6 +176,9 @@ export async function fetchOnlineCoverArt(params: {
               coverUrl: highResUrl,
               albumName: match.collectionName || cleanAlbum,
               artistName: match.artistName || cleanArtist,
+              trackTitle: match.trackName || cleanTitle || undefined,
+              genre: match.primaryGenreName || undefined,
+              trackNumber: typeof match.trackNumber === 'number' ? match.trackNumber : undefined,
               releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
               source: 'itunes',
             };
@@ -170,6 +210,9 @@ export async function fetchOnlineCoverArt(params: {
               coverUrl: highResUrl,
               albumName: match.collectionName || cleanAlbum,
               artistName: match.artistName || cleanArtist,
+              trackTitle: match.trackName || cleanTitle || undefined,
+              genre: match.primaryGenreName || undefined,
+              trackNumber: typeof match.trackNumber === 'number' ? match.trackNumber : undefined,
               releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
               source: 'itunes',
             };
@@ -201,6 +244,9 @@ export async function fetchOnlineCoverArt(params: {
               coverUrl: highResUrl,
               albumName: match.collectionName || cleanAlbum || match.trackName,
               artistName: match.artistName || cleanArtist,
+              trackTitle: match.trackName || cleanTitle || undefined,
+              genre: match.primaryGenreName || undefined,
+              trackNumber: typeof match.trackNumber === 'number' ? match.trackNumber : undefined,
               releaseYear: match.releaseDate ? new Date(match.releaseDate).getFullYear() : undefined,
               source: 'itunes',
             };

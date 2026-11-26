@@ -25,7 +25,12 @@ import {
   DEFAULT_ACCENT_PALETTE
 } from '../utils/colorExtract';
 import { fetchOnlineLyrics, clearLyricsCacheForTrack } from '../utils/lyricsService';
-import { fetchOnlineCoverArt } from '../utils/coverArtService';
+import {
+  fetchOnlineCoverArt,
+  isGenericArtist,
+  isGenericAlbum,
+  isMessyOrGenericTitle
+} from '../utils/coverArtService';
 import { matchM3uTracks } from '../utils/playlistUtils';
 import {
   loadPersistedState,
@@ -267,8 +272,12 @@ interface PlayerContextType {
   removeTrackFromLibrary: (trackId: string) => void;
   updateTrackMetadata: (
     trackIds: string[],
-    patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl' | 'explicit'>>
+    patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl' | 'explicit'>>,
+    silent?: boolean
   ) => void;
+  designingCoverPlaylistId: string | null;
+  openCoverDesigner: (playlistId: string) => void;
+  closeCoverDesigner: () => void;
   toggleTrackExplicit: (trackId: string) => void;
   renameTrackFile: (trackId: string, newTitle: string) => Promise<boolean>;
   updateTrackLyrics: (trackId: string, lyrics: LyricLine[], offsetSec?: number) => void;
@@ -337,6 +346,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [missingTrackIds, setMissingTrackIds] = useState<string[]>([]);
   const [disconnectedDriveTrackIds, setDisconnectedDriveTrackIds] = useState<string[]>([]);
   const [isImporting, setIsImporting] = useState(false);
+  const [designingCoverPlaylistId, setDesigningCoverPlaylistId] = useState<string | null>(null);
+
+  const openCoverDesigner = useCallback((playlistId: string) => {
+    setDesigningCoverPlaylistId(playlistId);
+  }, []);
+
+  const closeCoverDesigner = useCallback(() => {
+    setDesigningCoverPlaylistId(null);
+  }, []);
 
   // Playback state
   const [currentTrack, setCurrentTrack] = useState<Track | null>(null);
@@ -1854,7 +1872,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const updateTrackMetadata = useCallback(
     (
       trackIds: string[],
-      patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl' | 'explicit'>>
+      patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl' | 'explicit'>>,
+      silent = false
     ) => {
       const idSet = new Set(trackIds);
       setTracks(prev =>
@@ -1890,7 +1909,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           }
         }
       }
-      showToast(`Updated metadata for ${trackIds.length} ${trackIds.length === 1 ? 'track' : 'tracks'}`);
+      if (!silent) {
+        showToast(`Updated metadata for ${trackIds.length} ${trackIds.length === 1 ? 'track' : 'tracks'}`);
+      }
     },
     [showToast, tracks]
   );
@@ -2038,19 +2059,43 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
-      // 2. Query online (Apple Music / iTunes -> MusicBrainz) with smart sanitization
+      // 2. Query online (Apple Music / iTunes -> MusicBrainz) with smart sanitization & metadata enrichment
       try {
         const match = await fetchOnlineCoverArt({
           artist: track.artist,
           album: track.album,
           title: track.title,
         });
-        if (match?.coverUrl) {
-          updateTrackMetadata([track.id], { coverUrl: match.coverUrl });
-          return match.coverUrl;
+        if (match) {
+          const patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl'>> = {};
+          if (match.coverUrl) {
+            patch.coverUrl = match.coverUrl;
+          }
+          if (isGenericArtist(track.artist) && match.artistName) {
+            patch.artist = match.artistName;
+          }
+          if (isGenericAlbum(track.album) && match.albumName) {
+            patch.album = match.albumName;
+          }
+          if ((!track.year || track.year === 0) && match.releaseYear) {
+            patch.year = match.releaseYear;
+          }
+          if (!track.genre && match.genre) {
+            patch.genre = match.genre;
+          }
+          if (match.trackTitle && isMessyOrGenericTitle(track.title)) {
+            patch.title = match.trackTitle;
+          }
+          if (match.trackNumber && !track.trackNumber) {
+            patch.trackNumber = match.trackNumber;
+          }
+          if (Object.keys(patch).length > 0) {
+            updateTrackMetadata([track.id], patch, true);
+          }
+          return match.coverUrl || null;
         }
       } catch (err) {
-        console.warn('Cover art fetch error for track:', track.title, err);
+        console.warn('Cover art and metadata fetch error for track:', track.title, err);
       }
       return null;
     },
@@ -3226,6 +3271,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         fetchCoverForTrack,
         fetchMissingCoversBatch,
         isFetchingCovers,
+        designingCoverPlaylistId,
+        openCoverDesigner,
+        closeCoverDesigner,
         checkMissingFiles,
         removeMissingTracks,
         addCustomSmartRule,

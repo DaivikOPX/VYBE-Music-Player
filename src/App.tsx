@@ -10,6 +10,7 @@ import { RightDrawer } from './components/RightDrawer';
 import { PlayerBar } from './components/PlayerBar';
 import { AudioToolsPopover } from './components/AudioToolsPopover';
 import { TheaterMode } from './components/TheaterMode';
+import { PlaylistCoverModal } from './components/PlaylistCoverModal';
 import { TiltedCard, ShinyText, GradientText } from './components/reactbits';
 import {
   Play16Icon,
@@ -105,6 +106,10 @@ const SpotifyShell: React.FC = () => {
     updateAudioSettings,
     activeAccentColor,
     tracks,
+    playlists,
+    designingCoverPlaylistId,
+    closeCoverDesigner,
+    updatePlaylistCover,
   } = usePlayer();
 
   const [mobileScrubbing, setMobileScrubbing] = useState(false);
@@ -1016,6 +1021,24 @@ const SpotifyShell: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Global Playlist Cover Art Designer Studio */}
+      {(() => {
+        if (!designingCoverPlaylistId) return null;
+        const targetPl = playlists.find(p => p.id === designingCoverPlaylistId);
+        if (!targetPl) return null;
+        return (
+          <PlaylistCoverModal
+            isOpen={Boolean(designingCoverPlaylistId)}
+            onClose={closeCoverDesigner}
+            playlistTitle={targetPl.title}
+            onApplyCover={dataUrl => {
+              updatePlaylistCover(targetPl.id, dataUrl);
+              closeCoverDesigner();
+            }}
+          />
+        );
+      })()}
 
       {/* Toast Notification */}
       {toastMessage && (

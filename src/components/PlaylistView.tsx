@@ -239,7 +239,7 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlistId }) => {
           rotateAmplitude={9}
           scaleOnHover={1.02}
           onClick={() => {
-            if (playlist.isUserCreated) coverInputRef.current?.click();
+            if (playlist.isUserCreated) setCoverGeneratorOpen(true);
           }}
           className={`relative w-36 h-36 sm:w-44 sm:h-44 lg:w-52 lg:h-52 shrink-0 shadow-[0_8px_40px_rgba(0,0,0,0.6)] rounded-md overflow-hidden group ${
             playlist.isUserCreated ? 'cursor-pointer' : ''
@@ -266,9 +266,29 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlistId }) => {
           )}
 
           {playlist.isUserCreated && (
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 text-white">
-              <Camera size={28} />
-              <span className="text-xs font-bold">Choose photo</span>
+            <div className="absolute inset-0 bg-black/65 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-2 p-3 text-white">
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  setCoverGeneratorOpen(true);
+                }}
+                className="w-full max-w-[130px] py-1.5 px-3 rounded-full bg-spotify-green hover:bg-spotify-green-hover text-black text-xs font-bold flex items-center justify-center gap-1.5 shadow-lg transition-transform hover:scale-105 cursor-pointer"
+              >
+                <Wand2 size={13} />
+                <span>Design Cover</span>
+              </button>
+              <button
+                type="button"
+                onClick={e => {
+                  e.stopPropagation();
+                  coverInputRef.current?.click();
+                }}
+                className="w-full max-w-[130px] py-1.5 px-3 rounded-full bg-white/20 hover:bg-white/30 text-white text-xs font-semibold flex items-center justify-center gap-1.5 backdrop-blur-sm transition-colors cursor-pointer"
+              >
+                <Camera size={13} />
+                <span>Upload Photo</span>
+              </button>
             </div>
           )}
         </TiltedCard>

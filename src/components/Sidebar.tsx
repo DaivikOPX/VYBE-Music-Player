@@ -22,6 +22,7 @@ import {
   Edit2,
   FileAudio,
   FolderTree,
+  Wand2,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import {
@@ -63,6 +64,7 @@ export const Sidebar: React.FC = () => {
     importM3uPlaylist,
     pickNativeAudioFolder,
     pickNativeAudioFiles,
+    openCoverDesigner,
     settings,
   } = usePlayer();
   const m3uInputRef = useRef<HTMLInputElement>(null);
@@ -1051,6 +1053,18 @@ export const Sidebar: React.FC = () => {
             <Pin size={14} className="text-spotify-muted" />
             <span>{contextMenu.pinned ? 'Unpin playlist' : 'Pin playlist'}</span>
           </button>
+          {contextMenu.isUserCreated && (
+            <button
+              onClick={() => {
+                openCoverDesigner(contextMenu.id);
+                setContextMenu(null);
+              }}
+              className="w-full px-3.5 py-2 text-left hover:bg-white/10 flex items-center gap-2.5 cursor-pointer text-spotify-green font-medium"
+            >
+              <Wand2 size={14} className="text-spotify-green" />
+              <span>Design cover art...</span>
+            </button>
+          )}
           {contextMenu.isUserCreated && folders.length > 0 && (
             <>
               <div className="my-1 border-t border-white/10" />

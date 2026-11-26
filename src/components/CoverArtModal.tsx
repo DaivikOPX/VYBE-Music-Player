@@ -30,6 +30,7 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [isApplying, setIsApplying] = useState(false);
   const [writeToDisk, setWriteToDisk] = useState(true);
+  const [enrichMetadata, setEnrichMetadata] = useState(true);
 
   useEffect(() => {
     if (isOpen) {
@@ -79,25 +80,39 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
       }
 
       const trackIds = tracks.map(t => t.id);
-      updateTrackMetadata(trackIds, { coverUrl: match.coverUrl });
+      const patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl'>> = {
+        coverUrl: match.coverUrl,
+      };
+
+      if (enrichMetadata) {
+        if (match.artistName) patch.artist = match.artistName;
+        if (match.albumName) patch.album = match.albumName;
+        if (match.releaseYear) patch.year = match.releaseYear;
+        if (match.genre) patch.genre = match.genre;
+        if (match.trackTitle && tracks.length === 1) patch.title = match.trackTitle;
+        if (match.trackNumber && tracks.length === 1) patch.trackNumber = match.trackNumber;
+      }
+
+      updateTrackMetadata(trackIds, patch);
 
       // Physical ID3 file update on Windows desktop
-      if (window.electronAPI?.writeId3Tags && dataUrl) {
+      if (window.electronAPI?.writeId3Tags) {
         for (const tr of tracks) {
           const filePath = tr.sourceKey || tr.id.replace(/^electron-/, '');
           if (filePath && !filePath.startsWith('blob:') && !filePath.startsWith('http')) {
             try {
               await window.electronAPI.writeId3Tags(filePath, {
-                coverDataUrl: dataUrl,
+                ...patch,
+                coverDataUrl: dataUrl || undefined,
               });
             } catch (err) {
-              console.warn('Could not write cover art to disk for file:', filePath, err);
+              console.warn('Could not write tags/cover art to disk for file:', filePath, err);
             }
           }
         }
       }
 
-      showToast(`Updated cover art for ${tracks.length} track(s)`);
+      showToast(`Updated details & artwork for ${tracks.length} track(s)`);
       onClose();
     } catch (err) {
       console.error('Error applying cover art:', err);
@@ -192,9 +207,11 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
                 </span>
                 <h4 className="font-bold text-sm text-white truncate">{match.albumName}</h4>
                 <p className="text-xs text-spotify-muted truncate">{match.artistName}</p>
-                {match.releaseYear && (
-                  <p className="text-[11px] text-white/40">Release Year: {match.releaseYear}</p>
-                )}
+                <div className="flex items-center gap-2 text-[11px] text-white/40">
+                  {match.genre && <span>{match.genre}</span>}
+                  {match.genre && match.releaseYear && <span>•</span>}
+                  {match.releaseYear && <span>{match.releaseYear}</span>}
+                </div>
               </div>
             </div>
           )}
@@ -206,17 +223,31 @@ export const CoverArtModal: React.FC<CoverArtModalProps> = ({
             </div>
           )}
 
-          {/* Desktop write to disk checkbox */}
-          {window.electronAPI && match && (
-            <label className="flex items-center gap-2.5 text-xs text-spotify-muted hover:text-white cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={writeToDisk}
-                onChange={e => setWriteToDisk(e.target.checked)}
-                className="w-4 h-4 accent-spotify-green cursor-pointer"
-              />
-              <span>Permanently embed cover into local audio file(s) ID3 tag on disk</span>
-            </label>
+          {match && (
+            <div className="space-y-2 pt-1">
+              <label className="flex items-center gap-2.5 text-xs text-spotify-muted hover:text-white cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={enrichMetadata}
+                  onChange={e => setEnrichMetadata(e.target.checked)}
+                  className="w-4 h-4 accent-spotify-green cursor-pointer"
+                />
+                <span>Also pull & update missing track details (Artist, Album, Year, Genre)</span>
+              </label>
+
+              {/* Desktop write to disk checkbox */}
+              {window.electronAPI && (
+                <label className="flex items-center gap-2.5 text-xs text-spotify-muted hover:text-white cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    checked={writeToDisk}
+                    onChange={e => setWriteToDisk(e.target.checked)}
+                    className="w-4 h-4 accent-spotify-green cursor-pointer"
+                  />
+                  <span>Permanently embed cover & tags into local audio file(s) on disk</span>
+                </label>
+              )}
+            </div>
           )}
         </div>
 

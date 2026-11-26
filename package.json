@@ -1,5 +1,5 @@
 {
-  "name": "spotify-clone",
+  "name": "vybe-music-player",
   "private": true,
   "version": "1.0.0",
   "description": "VYBE - Offline-first high-fidelity music player with acrylic glass aesthetic",
@@ -16,7 +16,7 @@
     "android:sync": "npm run build && npx cap sync android"
   },
   "build": {
-    "appId": "com.localplayer.spotifyclone",
+    "appId": "com.vybe.musicplayer",
     "productName": "VYBE",
     "directories": {
       "output": "release"

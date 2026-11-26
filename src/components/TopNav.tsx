@@ -504,7 +504,7 @@ export const TopNav: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        showToast('VYBE Music Player v1.0.0 (Spotify Desktop Clone)');
+                        showToast('VYBE Music Player v1.0.0 — Modern Studio Audio Player');
                         setMenuOpen(null);
                         setActiveSubmenu(null);
                       }}

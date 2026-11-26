@@ -5,18 +5,36 @@
 <img src="build/icon.png" alt="VYBE Logo" width="120" height="120" />
 
 ### High-Fidelity, Offline-First Music Player with Ambient Glassmorphism
-*A studio-grade desktop and mobile audio experience designed for true audiophiles.*
+*A studio-grade desktop, mobile, and web audio experience designed for true audiophiles.*
+
+[![Live Web Player](https://img.shields.io/badge/🌐_Web_Player-Launch_Online-1ed760?style=for-the-badge&logo=googlechrome&logoColor=white)](https://daivikopx.github.io/VYBE-Music-Player/)
+[![Download EXE](https://img.shields.io/badge/💾_Windows_Installer-.EXE_Download-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Setup-1.0.0.exe)
+[![Download APK](https://img.shields.io/badge/📱_Android_App-.APK_Download-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/vybe-release.apk)
 
 [![Release](https://img.shields.io/badge/Release-v1.0.0-1ed760?style=for-the-badge&logo=spotify&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Web%20%7C%20Android-blue?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
-[![React](https://img.shields.io/badge/React-19-61dafb?style=for-the-badge&logo=react&logoColor=black)](https://react.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178c6?style=for-the-badge&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![Electron](https://img.shields.io/badge/Electron-45-47848F?style=for-the-badge&logo=electron&logoColor=white)](https://www.electronjs.org/)
 
-[Features](#-key-features) • [Screenshots](#-preview--aesthetic) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Audio Engine](#-audio-engine-specifications) • [Keyboard Shortcuts](#-keyboard-shortcuts) • [Contributing](#-contributing)
+[⚡ Direct Downloads](#-instant-downloads--live-web-player) • [Web Player](https://daivikopx.github.io/VYBE-Music-Player/) • [Features](#-key-features) • [Screenshots](#-preview--aesthetic) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Shortcuts](#-keyboard-shortcuts)
 
 </div>
+
+---
+
+## ⚡ Instant Downloads & Live Web Player
+
+Enjoy VYBE seamlessly across all your devices:
+
+| Platform | Type | Direct Download / Access Link | Status |
+|:---|:---|:---|:---|
+| **🌐 Web Player** | **In-Browser PWA** | [👉 **Launch Live Web Player (daivikopx.github.io)**](https://daivikopx.github.io/VYBE-Music-Player/) | **Online** ✅ |
+| **💻 Windows** | **Standalone Installer (.exe)** | [📥 **Download VYBE-Setup-1.0.0.exe**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Setup-1.0.0.exe) | **Latest Release** 🚀 |
+| **💻 Windows** | **Portable (.exe)** | [📦 **Download VYBE-Portable-1.0.0.exe**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Portable-1.0.0.exe) | **No Install Needed** ⚡ |
+| **📱 Android** | **Package (.apk)** | [📱 **Download vybe-release.apk**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/vybe-release.apk) | **Ready** 🎵 |
+
+> 💡 *All builds are self-contained and bundled directly with hardware acceleration and Web Audio DSP engine. You can also visit our [GitHub Releases](https://github.com/DaivikOPX/VYBE-Music-Player/releases) page for checksums, release notes, and all binaries.*
+
+---
 
 ---
 

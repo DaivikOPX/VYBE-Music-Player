@@ -165,17 +165,17 @@ export const PlayerBar: React.FC = () => {
             }}
             style={{
               background: settings.hazyMode
-                ? 'var(--hazy-panel-bg, rgba(18, 18, 24, 0.55))'
+                ? 'var(--hazy-panel-bg, rgba(18, 18, 24, 0.65))'
                 : currentTrack.accentColor && currentTrack.accentColor !== '#282828'
-                ? `linear-gradient(90deg, ${currentTrack.accentColor}d9 0%, #242424 100%)`
-                : '#242424',
-              backdropFilter: settings.hazyMode ? 'blur(var(--hazy-panel-blur, 20px))' : undefined,
-              WebkitBackdropFilter: settings.hazyMode ? 'blur(var(--hazy-panel-blur, 20px))' : undefined,
+                ? `linear-gradient(90deg, ${currentTrack.accentColor}cc 0%, rgba(26, 26, 30, 0.95) 100%)`
+                : 'rgba(28, 28, 32, 0.92)',
+              backdropFilter: 'blur(28px) saturate(190%)',
+              WebkitBackdropFilter: 'blur(28px) saturate(190%)',
             }}
-            className="rounded-lg px-2.5 py-2 flex items-center justify-between gap-3 relative overflow-hidden shadow-xl border border-white/10"
+            className="rounded-2xl px-3 py-2.5 flex items-center justify-between gap-3 relative overflow-hidden shadow-2xl border border-white/12 active:scale-[0.985] transition-transform duration-200 cursor-pointer"
           >
-            <div className="flex items-center gap-2.5 min-w-0 flex-1">
-              <div className="w-10 h-10 rounded bg-[#181818] flex items-center justify-center overflow-hidden shrink-0">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-11 h-11 rounded-lg bg-[#181818] flex items-center justify-center overflow-hidden shrink-0 shadow-md">
                 {currentTrack.coverUrl ? (
                   <img
                     src={currentTrack.coverUrl}
@@ -187,8 +187,8 @@ export const PlayerBar: React.FC = () => {
                 )}
               </div>
               <div className="min-w-0">
-                <p className="text-xs font-bold text-white truncate">{currentTrack.title}</p>
-                <div className="flex items-center gap-1 min-w-0">
+                <p className="text-[13px] font-bold text-white truncate leading-tight">{currentTrack.title}</p>
+                <div className="flex items-center gap-1.5 min-w-0 mt-0.5">
                   {currentTrack.explicit && (
                     <span
                       title="Explicit"
@@ -197,7 +197,7 @@ export const PlayerBar: React.FC = () => {
                       E
                     </span>
                   )}
-                  <p className="text-[11px] text-spotify-muted truncate">{currentTrack.artist}</p>
+                  <p className="text-xs text-white/70 truncate">{currentTrack.artist}</p>
                 </div>
               </div>
             </div>
@@ -205,21 +205,24 @@ export const PlayerBar: React.FC = () => {
             <div className="flex items-center gap-3 shrink-0" onClick={e => e.stopPropagation()}>
               <button
                 onClick={() => toggleLikeTrack(currentTrack.id)}
-                className={isLiked ? 'text-spotify-green' : 'text-spotify-muted'}
+                className={`p-1.5 ${isLiked ? 'text-spotify-green' : 'text-white/60 active:text-white'}`}
               >
-                {isLiked ? <CheckCircleIcon size={20} /> : <PlusCircleIcon size={20} />}
+                {isLiked ? <CheckCircleIcon size={22} /> : <PlusCircleIcon size={22} />}
               </button>
               <button
                 onClick={togglePlay}
-                className="w-8 h-8 flex items-center justify-center text-white"
+                className="w-9 h-9 rounded-full bg-white text-black flex items-center justify-center shadow-lg active:scale-90 transition-transform"
               >
-                {isPlaying ? <Pause16Icon size={20} /> : <Play16Icon size={20} />}
+                {isPlaying ? <Pause16Icon size={18} /> : <Play16Icon size={18} className="ml-0.5" />}
               </button>
             </div>
 
-            {/* Thin progress bar at bottom of mobile mini bar */}
-            <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/20">
-              <div className="h-full bg-white" style={{ width: `${progressPct}%` }} />
+            {/* Glowing smooth progress bar at bottom of mobile mini bar */}
+            <div className="absolute bottom-0 left-0 right-0 h-[2.5px] bg-white/15">
+              <div
+                className="h-full bg-spotify-green transition-all duration-150 shadow-[0_0_8px_rgba(30,215,96,0.8)]"
+                style={{ width: `${progressPct}%` }}
+              />
             </div>
           </div>
         )}

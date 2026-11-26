@@ -71,9 +71,38 @@ Whether you are listening to lossless FLACs, mastering with our 6-band biquad pa
 
 ---
 
-## 🏗️ Architecture
+## 🏗️ Architecture & Cross-Platform Engineering
 
-VYBE is built as a unified cross-platform codebase sharing a single React 19 + TypeScript core:
+VYBE is engineered around a **100% unified, shared codebase philosophy**. Rather than writing and maintaining fragmented codebases (e.g. rewriting the app from scratch in Dart for Flutter, Swift for iOS, or C# for Windows), VYBE shares a single **React 19 + TypeScript** core across all three target platforms:
+
+```
+                          ┌────────────────────────────────┐
+                          │   Core React 19 + TypeScript   │
+                          │   • Web Audio API DSP Graph    │
+                          │   • 6-Band Parametric EQ       │
+                          │   • Synced Karaoke LRC Engine  │
+                          │   • IndexedDB Local Storage    │
+                          │   • Frosted Glassmorphism UI   │
+                          └────────────────────────────────┘
+                                           │
+         ┌─────────────────────────────────┼─────────────────────────────────┐
+         ▼                                 ▼                                 ▼
+┌──────────────────┐             ┌──────────────────┐             ┌──────────────────┐
+│  🌐 Web Player   │             │   💻 Desktop     │             │   📱 Android     │
+│   (Vite + PWA)   │             │   (Electron 45)  │             │   (Capacitor 8)  │
+│                  │             │                  │             │                  │
+│ • GitHub Pages   │             │ • Native Dialogs │             │ • Native Service │
+│ • Offline Cache  │             │ • Window Controls│             │ • Media Session  │
+│ • Zero Install   │             │ • Local FS Path  │             │ • Lockscreen Bar │
+└──────────────────┘             └──────────────────┘             └──────────────────┘
+```
+
+### 💡 Why This Unified Approach Matters:
+* **Zero Feature Divergence**: When a feature is built (like a new EQ preset, a zoom level, or an audio algorithm), it is instantly available across Web, Windows Desktop, and Android simultaneously.
+* **Bit-Perfect Audio Parity**: The Web Audio API DSP node graph runs identical 32-bit floating-point audio processing on your desktop speakers and phone headphones.
+* **Native Bridges Where It Counts**: Native wrappers provide OS-level capabilities without polluting UI code:
+  - **Windows (Electron)**: Frameless acrylic window dragging, native file-picker dialogues, and deep file associations for `.mp3`, `.flac`, `.wav`.
+  - **Android (Capacitor)**: Android `ForegroundService` with notification drawer controls, wake-locks for screen-off playback, and hardware back-button integration.
 
 ```
 vybe-music-player/

@@ -246,6 +246,8 @@ export interface ElectronBridgeAPI {
   getStartOnBoot?: () => Promise<boolean>;
   setGlobalShortcuts?: (enabled: boolean) => void;
   showNotification?: (title: string, body: string) => void;
+  setZoomFactor?: (factor: number) => void;
+  getZoomFactor?: () => number;
 }
 
 declare global {

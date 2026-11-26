@@ -53,6 +53,7 @@ export const TopNav: React.FC = () => {
     rescanWatchedFolders,
     setIsShortcutsOpen,
     settings,
+    updateAudioSettings,
     setAmoledMode,
     setHazyMode,
     setHazyBlur,
@@ -339,10 +340,7 @@ export const TopNav: React.FC = () => {
                         const cur = settings.zoomLevel || 100;
                         const next = Math.min(130, cur + 10);
                         if (next !== cur) {
-                          try {
-                            const root = document.getElementById('root');
-                            if (root) (root.style as any).zoom = `${next}%`;
-                          } catch {}
+                          updateAudioSettings({ zoomLevel: next });
                         }
                         setMenuOpen(null);
                         setActiveSubmenu(null);
@@ -357,10 +355,7 @@ export const TopNav: React.FC = () => {
                         const cur = settings.zoomLevel || 100;
                         const next = Math.max(70, cur - 10);
                         if (next !== cur) {
-                          try {
-                            const root = document.getElementById('root');
-                            if (root) (root.style as any).zoom = `${next}%`;
-                          } catch {}
+                          updateAudioSettings({ zoomLevel: next });
                         }
                         setMenuOpen(null);
                         setActiveSubmenu(null);
@@ -372,10 +367,7 @@ export const TopNav: React.FC = () => {
                     </button>
                     <button
                       onClick={() => {
-                        try {
-                          const root = document.getElementById('root');
-                          if (root) (root.style as any).zoom = '100%';
-                        } catch {}
+                        updateAudioSettings({ zoomLevel: 100 });
                         setMenuOpen(null);
                         setActiveSubmenu(null);
                       }}

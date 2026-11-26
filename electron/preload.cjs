@@ -1,4 +1,4 @@
-const { contextBridge, ipcRenderer, webUtils } = require('electron');
+const { contextBridge, ipcRenderer, webUtils, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
@@ -11,6 +11,22 @@ contextBridge.exposeInMainWorld('electronAPI', {
     const listener = (_event, val) => cb(Boolean(val));
     ipcRenderer.on('window:maximized', listener);
     return () => ipcRenderer.removeListener('window:maximized', listener);
+  },
+  setZoomFactor: (factor) => {
+    try {
+      if (typeof factor === 'number' && factor > 0) {
+        webFrame.setZoomFactor(factor);
+      }
+    } catch (err) {
+      console.error('Failed to set zoom factor:', err);
+    }
+  },
+  getZoomFactor: () => {
+    try {
+      return webFrame.getZoomFactor();
+    } catch {
+      return 1;
+    }
   },
   onMediaControl: (cb) => {
     const listener = (_event, action) => cb(String(action));

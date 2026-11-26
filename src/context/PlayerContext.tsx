@@ -670,7 +670,30 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     document.documentElement.classList.toggle('hazy-theme', Boolean(settings.hazyMode));
 
     const zoom = settings.zoomLevel || 100;
-    (document.documentElement.style as any).zoom = `${zoom / 100}`;
+    const factor = zoom / 100;
+
+    if (window.electronAPI?.setZoomFactor) {
+      window.electronAPI.setZoomFactor(factor);
+      (document.documentElement.style as any).zoom = '';
+      document.documentElement.style.width = '';
+      document.documentElement.style.height = '';
+      const root = document.getElementById('root');
+      if (root) {
+        (root.style as any).zoom = '';
+        root.style.width = '';
+        root.style.height = '';
+      }
+    } else {
+      if (factor === 1) {
+        (document.documentElement.style as any).zoom = '';
+        document.documentElement.style.width = '';
+        document.documentElement.style.height = '';
+      } else {
+        (document.documentElement.style as any).zoom = `${factor}`;
+        document.documentElement.style.width = `${(100 / factor).toFixed(3)}vw`;
+        document.documentElement.style.height = `${(100 / factor).toFixed(3)}vh`;
+      }
+    }
 
     if (settings.hazyMode) {
       const blurVal = typeof settings.hazyBlur === 'number' ? settings.hazyBlur : 45;

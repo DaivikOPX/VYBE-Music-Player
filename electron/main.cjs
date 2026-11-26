@@ -1,7 +1,8 @@
 const { app, BrowserWindow, ipcMain, dialog, protocol, shell, Tray, Menu, nativeImage, globalShortcut, Notification, session } = require('electron');
 
+app.name = 'VYBE';
 if (process.platform === 'win32') {
-  app.setAppUserModelId('com.localplayer.spotifyclone');
+  app.setAppUserModelId('com.vybe.musicplayer');
 }
 const path = require('path');
 const fs = require('fs');
@@ -474,8 +475,10 @@ function syncDesktopMediaChrome(isPlaying, title) {
 
 function createWindow() {
   const icons = getDesktopIcons();
-  const customIconPath = path.join(__dirname, '..', 'build', 'icon.png');
-  const winIcon = fs.existsSync(customIconPath) ? nativeImage.createFromPath(customIconPath) : icons.trayIcon;
+  const iconIcoPath = path.join(__dirname, '..', 'build', 'icon.ico');
+  const iconPngPath = path.join(__dirname, '..', 'build', 'icon.png');
+  const appIconPath = process.platform === 'win32' && fs.existsSync(iconIcoPath) ? iconIcoPath : (fs.existsSync(iconPngPath) ? iconPngPath : null);
+  const winIcon = appIconPath ? (process.platform === 'win32' ? appIconPath : nativeImage.createFromPath(appIconPath)) : icons.trayIcon;
 
   mainWindow = new BrowserWindow({
     width: 1280,
@@ -496,6 +499,14 @@ function createWindow() {
       navigateOnDragDrop: false
     }
   });
+
+  if (appIconPath) {
+    try {
+      mainWindow.setIcon(appIconPath);
+    } catch {
+      // ignore
+    }
+  }
 
   // Security: Restrict renderer navigation to trusted application URLs
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
@@ -952,8 +963,11 @@ app.whenReady().then(() => {
   });
 
   if (!appTray) {
-    const icons = getDesktopIcons();
-    appTray = new Tray(icons.trayIcon);
+    const iconIcoPath = path.join(__dirname, '..', 'build', 'icon.ico');
+    const iconPngPath = path.join(__dirname, '..', 'build', 'icon.png');
+    const trayIconPath = process.platform === 'win32' && fs.existsSync(iconIcoPath) ? iconIcoPath : (fs.existsSync(iconPngPath) ? iconPngPath : null);
+    const trayImg = trayIconPath ? nativeImage.createFromPath(trayIconPath) : getDesktopIcons().trayIcon;
+    appTray = new Tray(trayImg);
     appTray.on('click', () => {
       if (!mainWindow) return;
       if (mainWindow.isMinimized()) mainWindow.restore();

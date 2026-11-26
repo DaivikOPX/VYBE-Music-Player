@@ -288,7 +288,7 @@ const SpotifyShell: React.FC = () => {
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
-      className={`h-screen w-screen ${settings.hazyMode ? 'bg-[#09090d]' : 'bg-black'} text-white flex flex-col overflow-hidden relative pt-safe pb-safe ${
+      className={`h-full w-full min-h-screen min-w-full ${settings.hazyMode ? 'bg-[#09090d]' : 'bg-black'} text-white flex flex-col overflow-hidden relative pt-safe pb-safe ${
         settings.animationsEnabled === false ? 'reduce-motion' : ''
       }`}
     >

@@ -15,7 +15,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Web%20%7C%20Android-blue?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-[⚡ Direct Downloads](#-instant-downloads--live-web-player) • [Web Player](https://daivikopx.github.io/VYBE-Music-Player/) • [Features](#-key-features) • [Screenshots](#-preview--aesthetic) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Shortcuts](#-keyboard-shortcuts)
+[⚡ Instant Downloads](#-instant-downloads--live-web-player) • [🌐 Web Player](https://daivikopx.github.io/VYBE-Music-Player/) • [Features](#-key-features) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Shortcuts](#-keyboard-shortcuts) • [Contributing](#-contributing)
 
 </div>
 
@@ -33,8 +33,6 @@ Enjoy VYBE seamlessly across all your devices:
 | **📱 Android** | **Package (.apk)** | [📱 **Download vybe-release.apk**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/vybe-release.apk) | **Ready** 🎵 |
 
 > 💡 *All builds are self-contained and bundled directly with hardware acceleration and Web Audio DSP engine. You can also visit our [GitHub Releases](https://github.com/DaivikOPX/VYBE-Music-Player/releases) page for checksums, release notes, and all binaries.*
-
----
 
 ---
 

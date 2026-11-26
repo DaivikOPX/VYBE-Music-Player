@@ -91,6 +91,7 @@ export const SettingsView: React.FC = () => {
   } = usePlayer();
 
   const [query, setQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('all');
   const [confirmClearHistory, setConfirmClearHistory] = useState(false);
   const [newPresetName, setNewPresetName] = useState('');
   const [storageInfo, setStorageInfo] = useState<{ usedMb: string; quotaMb: string } | null>(null);
@@ -108,7 +109,21 @@ export const SettingsView: React.FC = () => {
   }, [tracks.length]);
 
   const q = query.trim().toLowerCase();
-  const matches = (...terms: string[]) => !q || terms.some(t => t.toLowerCase().includes(q));
+  const matches = (cat: string, ...terms: string[]) => {
+    if (activeCategory !== 'all' && activeCategory !== cat) return false;
+    if (!q) return true;
+    return terms.some(t => t.toLowerCase().includes(q));
+  };
+
+  const CATEGORIES = [
+    { id: 'all', label: 'All Settings' },
+    { id: 'playback', label: 'Playback & EQ' },
+    { id: 'display', label: 'Display & Visuals' },
+    { id: 'lyrics', label: 'Lyrics & Syncing' },
+    { id: 'startup', label: 'Startup & Window' },
+    { id: 'library', label: 'Local Library' },
+    { id: 'storage', label: 'Storage & Backup' },
+  ] as const;
 
   const platformName = window.electronAPI
     ? 'Windows Desktop App'
@@ -125,7 +140,7 @@ export const SettingsView: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full px-4 md:px-10 py-8 pb-20">
+    <div className="min-h-full px-4 md:px-10 py-8 pb-36">
       <input
         ref={backupInputRef}
         type="file"
@@ -144,20 +159,57 @@ export const SettingsView: React.FC = () => {
             <p className="text-xs text-spotify-muted mt-1">{platformName} • v1.0.0</p>
           </div>
 
-          <div className="flex items-center bg-[#242424] focus-within:ring-1 focus-within:ring-white/40 rounded-full px-3.5 py-2 w-full sm:w-64">
+          <div className="flex items-center bg-[#242424] focus-within:ring-1 focus-within:ring-white/40 rounded-full px-3.5 py-2 w-full sm:w-64 relative">
             <Search size={15} className="text-spotify-muted mr-2 shrink-0" />
             <input
               type="text"
               value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search settings..."
-              className="bg-transparent text-xs text-white placeholder:text-spotify-muted focus:outline-none w-full"
+              onChange={e => {
+                setQuery(e.target.value);
+                if (e.target.value) setActiveCategory('all');
+              }}
+              placeholder="Search all settings..."
+              className="bg-transparent text-xs text-white placeholder:text-spotify-muted focus:outline-none w-full pr-5"
             />
+            {query && (
+              <button
+                type="button"
+                onClick={() => setQuery('')}
+                className="absolute right-3 text-spotify-muted hover:text-white text-xs cursor-pointer"
+                title="Clear search"
+              >
+                ✕
+              </button>
+            )}
           </div>
         </div>
 
+        {/* Category Pills Navigation */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none select-none">
+          {CATEGORIES.map(cat => {
+            const isActive = activeCategory === cat.id && !query;
+            return (
+              <button
+                key={cat.id}
+                type="button"
+                onClick={() => {
+                  setActiveCategory(cat.id);
+                  setQuery('');
+                }}
+                className={`px-3.5 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all cursor-pointer ${
+                  isActive
+                    ? 'bg-spotify-green text-black shadow-md'
+                    : 'bg-white/10 hover:bg-white/20 text-white'
+                }`}
+              >
+                {cat.label}
+              </button>
+            );
+          })}
+        </div>
+
         {/* Account / Profile Quick Card */}
-        {matches('account', 'profile', 'avatar', 'name') && (
+        {matches('all', 'account', 'profile', 'avatar', 'name', 'bio', 'display name') && (
           <SpotlightCard className="bg-[#181818] border border-white/10 rounded-xl p-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-4 min-w-0">
@@ -193,7 +245,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Startup & Desktop Window */}
-        {matches('startup', 'resume', 'tray', 'window', 'minimize', 'close') && (
+        {matches('startup', 'startup', 'resume', 'tray', 'window', 'minimize', 'close', 'boot', 'windows', 'notifications', 'toast', 'shortcuts', 'global', 'media') && (
           <section className="space-y-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Laptop size={17} className="text-spotify-green" />
@@ -276,7 +328,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Playback & Audio */}
-        {matches('playback', 'audio', 'output', 'speaker', 'crossfade', 'speed', 'equalizer', 'eq', 'preamp', 'gain') && (
+        {matches('playback', 'playback', 'audio', 'output', 'speaker', 'device', 'crossfade', 'gapless', 'speed', 'rate', 'tempo', 'pitch', 'equalizer', 'eq', 'preamp', 'gain', 'volume', 'loudness', 'normalize', 'mono', 'balance', 'private', 'session', 'bands', 'preset', 'hz', 'decibel', 'db') && (
           <section className="space-y-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Sliders size={17} className="text-spotify-green" />
@@ -588,7 +640,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Synced Lyrics Engine */}
-        {matches('lyrics', 'lrc', 'lrclib', 'online', 'local', 'karaoke', 'sync') && (
+        {matches('lyrics', 'lyrics', 'lyric', 'lrc', 'lrclib', 'online', 'local', 'karaoke', 'sync', 'synced', 'text', 'words') && (
           <section className="space-y-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Mic2 size={17} className="text-spotify-green" />
@@ -633,7 +685,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Display & Visuals */}
-        {matches('display', 'theme', 'amoled', 'compact', 'visualizer', 'animation', 'motion', 'badge', 'codec', 'color', 'zoom', 'scale', 'dense', 'spacious') && (
+        {matches('display', 'display', 'visual', 'ui', 'theme', 'dark', 'amoled', 'black', 'hazy', 'transparent', 'transparency', 'glass', 'blur', 'frost', 'acrylic', 'zoom', 'scale', 'dense', 'spacious', 'size', 'dpi', 'compact', 'spacing', 'sidebar', 'dock', 'hover', 'badge', 'codec', 'flac', 'mp3', 'visualizer', 'spectrum', 'bars', 'waveform', 'fluid', 'grid', 'list', 'view', 'motion', 'animation', 'aurora', 'color', 'accent', 'tint', 'mood', 'profile', 'swatch') && (
           <section className="space-y-4">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <Sparkles size={17} className="text-spotify-green" />
@@ -1127,7 +1179,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Local Files & Watched Folders */}
-        {matches('local', 'music', 'folder', 'scan', 'import', 'files') && (
+        {matches('library', 'library', 'local', 'music', 'folder', 'folders', 'scan', 'rescan', 'watch', 'watched', 'import', 'files', 'file', 'add', 'directory', 'path') && (
           <section className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <h2 className="text-base font-bold text-white flex items-center gap-2">
@@ -1195,7 +1247,7 @@ export const SettingsView: React.FC = () => {
         )}
 
         {/* Storage, Backup & Shortcuts */}
-        {matches('storage', 'backup', 'export', 'import', 'restore', 'history', 'clear', 'shortcut', 'about') && (
+        {matches('storage', 'storage', 'backup', 'export', 'import', 'restore', 'history', 'clear', 'reset', 'cache', 'quota', 'shortcut', 'shortcuts', 'keyboard', 'keys', 'about', 'summary') && (
           <section className="space-y-3">
             <h2 className="text-base font-bold text-white flex items-center gap-2">
               <HardDrive size={17} className="text-spotify-green" />
@@ -1322,6 +1374,31 @@ export const SettingsView: React.FC = () => {
               </div>
             </div>
           </section>
+        )}
+
+        {/* Empty Search Fallback */}
+        {query && ![
+          matches('startup', 'startup', 'resume', 'tray', 'window', 'minimize', 'close', 'boot', 'windows', 'notifications', 'toast', 'shortcuts', 'global', 'media'),
+          matches('playback', 'playback', 'audio', 'output', 'speaker', 'device', 'crossfade', 'gapless', 'speed', 'rate', 'tempo', 'pitch', 'equalizer', 'eq', 'preamp', 'gain', 'volume', 'loudness', 'normalize', 'mono', 'balance', 'private', 'session', 'bands', 'preset', 'hz', 'decibel', 'db'),
+          matches('lyrics', 'lyrics', 'lyric', 'lrc', 'lrclib', 'online', 'local', 'karaoke', 'sync', 'synced', 'text', 'words'),
+          matches('display', 'display', 'visual', 'ui', 'theme', 'dark', 'amoled', 'black', 'hazy', 'transparent', 'transparency', 'glass', 'blur', 'frost', 'acrylic', 'zoom', 'scale', 'dense', 'spacious', 'size', 'dpi', 'compact', 'spacing', 'sidebar', 'dock', 'hover', 'badge', 'codec', 'flac', 'mp3', 'visualizer', 'spectrum', 'bars', 'waveform', 'fluid', 'grid', 'list', 'view', 'motion', 'animation', 'aurora', 'color', 'accent', 'tint', 'mood', 'profile', 'swatch'),
+          matches('library', 'library', 'local', 'music', 'folder', 'folders', 'scan', 'rescan', 'watch', 'watched', 'import', 'files', 'file', 'add', 'directory', 'path'),
+          matches('storage', 'storage', 'backup', 'export', 'import', 'restore', 'history', 'clear', 'reset', 'cache', 'quota', 'shortcut', 'shortcuts', 'keyboard', 'keys', 'about', 'summary')
+        ].some(Boolean) && (
+          <div className="text-center py-12 space-y-3 bg-[#181818] border border-white/10 rounded-xl p-8">
+            <p className="text-base font-bold text-white">No settings found matching "{query}"</p>
+            <p className="text-xs text-spotify-muted">Try searching for keywords like sound, zoom, lyrics, theme, or shortcuts</p>
+            <button
+              type="button"
+              onClick={() => {
+                setQuery('');
+                setActiveCategory('all');
+              }}
+              className="px-4 py-2 rounded-full bg-white text-black text-xs font-bold hover:scale-104 cursor-pointer transition-all"
+            >
+              Show All Settings
+            </button>
+          </div>
         )}
       </div>
     </div>

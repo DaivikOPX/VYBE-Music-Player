@@ -658,9 +658,9 @@ export const StatsView: React.FC = () => {
               <div className="flex items-center gap-1.5 text-[11px] text-spotify-muted">
                 <span>Less</span>
                 <span className="w-3 h-3 rounded-xs bg-white/10" />
-                <span className="w-3 h-3 rounded-xs bg-[#1ed760]/30" />
-                <span className="w-3 h-3 rounded-xs bg-[#1ed760]/60" />
-                <span className="w-3 h-3 rounded-xs bg-[#1ed760]" />
+                <span className="w-3 h-3 rounded-xs bg-spotify-green/30" />
+                <span className="w-3 h-3 rounded-xs bg-spotify-green/60" />
+                <span className="w-3 h-3 rounded-xs bg-spotify-green" />
                 <span>More</span>
               </div>
             </div>
@@ -685,10 +685,10 @@ export const StatsView: React.FC = () => {
                         weight === 0
                           ? 'bg-white/10'
                           : ratio < 0.25
-                          ? 'bg-[#1ed760]/30'
+                          ? 'bg-spotify-green/30'
                           : ratio < 0.6
-                          ? 'bg-[#1ed760]/65'
-                          : 'bg-[#1ed760]';
+                          ? 'bg-spotify-green/65'
+                          : 'bg-spotify-green';
                       return (
                         <div
                           key={day.key}

@@ -535,7 +535,7 @@ export const TrackRow: React.FC<TrackRowProps> = ({
                 checked={selected}
                 onChange={() => onToggleSelect?.(track.id)}
                 onClick={e => e.stopPropagation()}
-                className="accent-[#1ed760] ml-1 cursor-pointer"
+                className="accent-spotify-green ml-1 cursor-pointer"
                 title="Select track for bulk edit"
               />
             )}

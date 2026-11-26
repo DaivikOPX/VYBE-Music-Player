@@ -1,8 +1,9 @@
-import React from 'react';
-import { Clock, Disc3, Heart } from 'lucide-react';
+import React, { useState } from 'react';
+import { Clock, Disc3, Heart, ListPlus } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { Track } from '../types';
 import { TrackRow } from './TrackRow';
+import { BatchMetadataForm } from './BatchMetadataForm';
 import { PlayTriangleIcon, Pause16Icon, ShuffleIcon } from './SpotifyIcons';
 import { TiltedCard, BlurText, ShinyText, ClickSpark } from './reactbits';
 
@@ -24,9 +25,14 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
     toggleShuffle,
     savedAlbumIds,
     toggleSaveAlbum,
+    addToQueue,
+    showToast,
     navigate,
     settings,
   } = usePlayer();
+
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
 
   const album =
     albums.find(
@@ -180,7 +186,70 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
           >
             <Heart size={24} className={isSavedAlbum ? 'fill-spotify-green' : ''} />
           </button>
+
+          {albumTracks.length > 0 && (
+            <button
+              onClick={() => {
+                setSelectMode(p => !p);
+                setSelectedIds([]);
+              }}
+              className={`ml-auto px-3 py-1.5 rounded-md text-xs font-bold border cursor-pointer shrink-0 ${
+                selectMode
+                  ? 'bg-spotify-green text-black border-spotify-green'
+                  : 'bg-[#242424] text-white border-white/10 hover:bg-[#303030]'
+              }`}
+            >
+              {selectMode ? 'Done' : 'Bulk Edit Tags'}
+            </button>
+          )}
         </div>
+
+        {selectMode && selectedIds.length > 0 && (
+          <div className="mb-4 p-3.5 rounded-xl bg-[#181818] border border-spotify-green/40 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-white">
+              <span className="font-bold text-spotify-green">
+                {selectedIds.length} tracks selected
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setSelectedIds(albumTracks.map(t => t.id))}
+                  className="text-spotify-green font-bold hover:underline cursor-pointer"
+                >
+                  Select all ({albumTracks.length})
+                </button>
+                <span className="text-white/20">•</span>
+                <button
+                  onClick={() => setSelectedIds([])}
+                  className="text-spotify-muted hover:text-white cursor-pointer"
+                >
+                  Clear
+                </button>
+              </div>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-white/5">
+              <button
+                onClick={() => {
+                  const selTracks = albumTracks.filter(t => selectedIds.includes(t.id));
+                  selTracks.forEach(t => addToQueue(t));
+                  showToast(`Added ${selTracks.length} tracks to queue`);
+                }}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-semibold cursor-pointer"
+              >
+                <ListPlus size={13} />
+                <span>Add to Queue</span>
+              </button>
+            </div>
+
+            <BatchMetadataForm
+              selectedIds={selectedIds}
+              onComplete={() => {
+                setSelectedIds([]);
+                setSelectMode(false);
+              }}
+            />
+          </div>
+        )}
 
         <div className="hidden md:grid grid-cols-[32px_4fr_2fr_1.2fr_100px] items-center gap-4 px-4 pb-2 mb-2 border-b border-white/10 text-xs font-medium text-spotify-muted uppercase tracking-wider">
           <div className="text-center">#</div>
@@ -194,7 +263,19 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
 
         <div className="space-y-0.5 pb-8">
           {albumTracks.map((t, idx) => (
-            <TrackRow key={t.id} track={t} index={idx} contextList={albumTracks} />
+            <TrackRow
+              key={t.id}
+              track={t}
+              index={idx}
+              contextList={albumTracks}
+              selectable={selectMode}
+              selected={selectedIds.includes(t.id)}
+              onToggleSelect={tid =>
+                setSelectedIds(prev =>
+                  prev.includes(tid) ? prev.filter(id => id !== tid) : [...prev, tid]
+                )
+              }
+            />
           ))}
         </div>
       </div>

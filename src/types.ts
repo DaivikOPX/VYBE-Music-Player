@@ -160,8 +160,10 @@ export interface AudioSettings {
   desktopNotifications?: boolean;
   startOnBoot?: boolean;
   globalShortcuts?: boolean;
-  visualizerStyle?: 'bars' | 'waveform';
+  visualizerStyle?: 'bars' | 'waveform' | 'fluid';
   zoomLevel?: number; // 70 to 130
+  lyricsSource?: 'online' | 'local';
+  dynamicAccentColor?: boolean;
 }
 
 export interface PersistedAppState {

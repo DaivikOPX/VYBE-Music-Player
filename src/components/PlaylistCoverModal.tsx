@@ -273,7 +273,7 @@ export const PlaylistCoverModal: React.FC<PlaylistCoverModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-5 py-2 rounded-full bg-spotify-green hover:bg-[#1ed760] text-black text-xs font-bold cursor-pointer transition-transform hover:scale-102"
+            className="flex items-center gap-2 px-5 py-2 rounded-full bg-spotify-green hover:bg-spotify-green-hover text-black text-xs font-bold cursor-pointer transition-transform hover:scale-102"
           >
             <Check size={14} />
             Set as Playlist Cover

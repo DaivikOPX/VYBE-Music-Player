@@ -67,6 +67,17 @@
   --font-title: 'CircularSpTitle', 'CircularSp', 'CircularStd', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 }
 
+@property --color-spotify-green {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #1ed760;
+}
+@property --color-spotify-green-hover {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: #3be477;
+}
+
 @layer base {
   *, ::before, ::after {
     font-family: var(--font-sans);
@@ -82,6 +93,7 @@
     -webkit-font-smoothing: antialiased;
     overflow: hidden;
     overscroll-behavior: none;
+    transition: --color-spotify-green 0.55s ease, --color-spotify-green-hover 0.55s ease;
   }
 }
 

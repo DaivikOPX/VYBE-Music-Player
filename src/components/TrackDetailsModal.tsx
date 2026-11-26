@@ -313,7 +313,7 @@ export const TrackDetailsModal: React.FC<TrackDetailsModalProps> = ({
           </button>
           <button
             onClick={handleSave}
-            className="flex items-center gap-2 px-6 py-2 rounded-full bg-spotify-green hover:bg-[#1ed760] text-black text-xs font-bold cursor-pointer transition-transform hover:scale-102"
+            className="flex items-center gap-2 px-6 py-2 rounded-full bg-spotify-green hover:bg-spotify-green-hover text-black text-xs font-bold cursor-pointer transition-transform hover:scale-102"
           >
             <Check size={14} />
             Save Details & Photo

@@ -19,6 +19,8 @@ import {
   Pencil,
   LayoutGrid,
   List,
+  Globe,
+  Loader2,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { PlaylistView } from './PlaylistView';
@@ -73,6 +75,10 @@ export const MainViewport: React.FC = () => {
     showToast,
     settings,
     profile,
+    activeAccentColor,
+    isFetchingLyrics,
+    lyricsStatusText,
+    fetchLyricsForTrack,
   } = usePlayer();
 
   const [homeFilter, setHomeFilter] = useState<HomeFilter>('all');
@@ -445,15 +451,15 @@ export const MainViewport: React.FC = () => {
           >
             {!settings.amoledMode && settings.animationsEnabled !== false && (
               <Aurora
-                colorStops={[currentTrack?.accentColor || '#6d28d9', '#1ed760', '#1e3a8a']}
+                colorStops={[currentTrack?.accentColor || '#6d28d9', activeAccentColor, '#1e3a8a']}
                 className="opacity-35"
               />
             )}
             {currentTrack ? (
               <div className="max-w-2xl mx-auto relative z-10">
                 <div className="flex items-center justify-between gap-4 mb-8">
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded bg-[#282828] flex items-center justify-center overflow-hidden shadow-lg">
+                  <div className="flex items-center gap-4 min-w-0">
+                    <div className="w-14 h-14 rounded bg-[#282828] flex items-center justify-center overflow-hidden shadow-lg shrink-0">
                       {currentTrack.coverUrl ? (
                         <img
                           src={currentTrack.coverUrl}
@@ -464,12 +470,37 @@ export const MainViewport: React.FC = () => {
                         <Music size={22} className="text-spotify-muted" />
                       )}
                     </div>
-                    <div>
-                      <h1 className="text-xl font-bold text-white">{currentTrack.title}</h1>
-                      <p className="text-sm text-white/75">{currentTrack.artist}</p>
+                    <div className="min-w-0">
+                      <h1 className="text-xl font-bold text-white truncate">{currentTrack.title}</h1>
+                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
+                        <p className="text-sm text-white/75 truncate">{currentTrack.artist}</p>
+                        {isFetchingLyrics && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white animate-pulse">
+                            <Loader2 size={10} className="animate-spin" />
+                            <span>Fetching LRCLIB...</span>
+                          </span>
+                        )}
+                        {!isFetchingLyrics && lyricsStatusText && (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-spotify-green/20 text-spotify-green">
+                            <Globe size={10} />
+                            <span>{lyricsStatusText}</span>
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2 shrink-0">
+                    {settings.lyricsSource !== 'local' && (
+                      <button
+                        onClick={() => void fetchLyricsForTrack(currentTrack, true)}
+                        disabled={isFetchingLyrics}
+                        title="Fetch or re-sync lyrics online via LRCLIB"
+                        className="px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
+                      >
+                        {isFetchingLyrics ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
+                        <span>{currentTrack.lyrics?.length ? 'Re-fetch' : 'Fetch Online'}</span>
+                      </button>
+                    )}
                     <input
                       ref={lrcFileInputRef}
                       type="file"
@@ -635,13 +666,60 @@ export const MainViewport: React.FC = () => {
                     })}
                   </div>
                 ) : (
-                  <div className="py-16 text-center text-white/75">
-                    <p className="text-xl font-bold mb-2">
-                      No lyrics or .lrc file found for this track
-                    </p>
-                    <p className="text-sm text-white/50">
-                      Place a matching .lrc file next to your audio file or embed lyrics tags.
-                    </p>
+                  <div className="py-16 text-center text-white/75 space-y-4">
+                    {isFetchingLyrics ? (
+                      <>
+                        <Loader2 size={32} className="mx-auto animate-spin text-spotify-green" />
+                        <p className="text-lg font-bold">Searching LRCLIB for synced lyrics...</p>
+                        <p className="text-xs text-white/50">
+                          Matching track title, artist & exact duration ({Math.round(currentTrack.duration || 0)}s)
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div>
+                          <p className="text-xl font-bold mb-2">
+                            {settings.lyricsSource === 'local'
+                              ? 'Local-only lyrics mode active'
+                              : 'No lyrics found for this track'}
+                          </p>
+                          <p className="text-sm text-white/50">
+                            {settings.lyricsSource === 'local'
+                              ? 'Place a matching .lrc/.txt file next to your song, or switch to Online Lyrics.'
+                              : 'Try loading a local .lrc/.txt file, editing manually, or re-fetching online.'}
+                          </p>
+                        </div>
+                        <div className="flex flex-wrap items-center justify-center gap-2">
+                          {settings.lyricsSource === 'local' ? (
+                            <button
+                              onClick={() => {
+                                updateAudioSettings({ lyricsSource: 'online' });
+                                void fetchLyricsForTrack(currentTrack, true);
+                              }}
+                              className="px-4 py-2 rounded-full bg-spotify-green text-black text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
+                            >
+                              <Globe size={14} />
+                              <span>Enable Online Lyrics & Fetch</span>
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => void fetchLyricsForTrack(currentTrack, true)}
+                              className="px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                            >
+                              <Globe size={14} />
+                              <span>Retry Online Search</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={() => lrcFileInputRef.current?.click()}
+                            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
+                          >
+                            <FileText size={14} />
+                            <span>Load .lrc / .txt</span>
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
               </div>

@@ -102,6 +102,7 @@ const SpotifyShell: React.FC = () => {
     pickNativeAudioFolder,
     toastMessage,
     updateAudioSettings,
+    activeAccentColor,
   } = usePlayer();
 
   const [mobileScrubbing, setMobileScrubbing] = useState(false);
@@ -549,7 +550,7 @@ const SpotifyShell: React.FC = () => {
             <div className="flex items-center justify-between gap-3">
               <div className="min-w-0">
                 <h2 className="text-xl font-black text-white truncate">
-                  <GradientText colors={['#ffffff', '#ffffff', '#1ed760', '#ffffff']} animationSpeed={8}>
+                  <GradientText colors={['#ffffff', '#ffffff', activeAccentColor, '#ffffff']} animationSpeed={8}>
                     {currentTrack.title}
                   </GradientText>
                 </h2>
@@ -908,8 +909,8 @@ const SpotifyShell: React.FC = () => {
               colorStops={[
                 currentTrack.accentColor && currentTrack.accentColor !== '#282828'
                   ? currentTrack.accentColor
-                  : '#1ed760',
-                '#1e3a8a',
+                  : activeAccentColor,
+                activeAccentColor,
                 '#09090b',
               ]}
               className="opacity-45"
@@ -959,7 +960,7 @@ const SpotifyShell: React.FC = () => {
                 >
                   <SkipBackIcon size={24} />
                 </button>
-                <ClickSpark>
+                <ClickSpark sparkColor={activeAccentColor}>
                   <button
                     onClick={togglePlay}
                     className="w-16 h-16 rounded-full bg-white text-black hover:scale-105 transition-transform flex items-center justify-center shadow-2xl cursor-pointer"

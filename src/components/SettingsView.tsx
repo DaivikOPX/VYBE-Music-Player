@@ -14,6 +14,7 @@ import {
   Search,
   Laptop,
   HardDrive,
+  Mic2,
 } from 'lucide-react';
 import { Capacitor } from '@capacitor/core';
 import { usePlayer, EQ_BANDS, EQ_PRESETS } from '../context/PlayerContext';
@@ -327,7 +328,7 @@ export const SettingsView: React.FC = () => {
                     step={0.5}
                     value={settings.preampDb ?? 0}
                     onChange={e => updateAudioSettings({ preampDb: Number(e.target.value) })}
-                    className="w-40 accent-[#1ed760] cursor-pointer"
+                    className="w-40 accent-spotify-green cursor-pointer"
                   />
                   {(settings.preampDb ?? 0) !== 0 && (
                     <button
@@ -355,7 +356,7 @@ export const SettingsView: React.FC = () => {
                   step={1}
                   value={settings.crossfadeSec}
                   onChange={e => setCrossfadeSec(Number(e.target.value))}
-                  className="w-44 accent-[#1ed760] cursor-pointer"
+                  className="w-44 accent-spotify-green cursor-pointer"
                 />
               </div>
 
@@ -375,7 +376,7 @@ export const SettingsView: React.FC = () => {
                     step={0.05}
                     value={settings.playbackRate}
                     onChange={e => setPlaybackRate(Number(e.target.value))}
-                    className="w-40 accent-[#1ed760] cursor-pointer"
+                    className="w-40 accent-spotify-green cursor-pointer"
                   />
                   {Math.abs(settings.playbackRate - 1) > 0.01 && (
                     <button
@@ -393,7 +394,8 @@ export const SettingsView: React.FC = () => {
                 <div>
                   <p className="text-sm font-semibold text-white">Gapless playback</p>
                   <p className="text-xs text-spotify-muted mt-0.5">
-                    Play continuous albums with zero gap between tracks
+                    Pre-buffers the next song before track end for zero silence
+                    {settings.crossfadeSec > 0 ? ' (paused while Crossfade is active)' : ''}
                   </p>
                 </div>
                 <SpotifySwitch
@@ -460,7 +462,7 @@ export const SettingsView: React.FC = () => {
                     step={0.05}
                     value={settings.audioBalance ?? 0}
                     onChange={e => updateAudioSettings({ audioBalance: Number(e.target.value) })}
-                    className="w-36 accent-[#1ed760] cursor-pointer"
+                    className="w-36 accent-spotify-green cursor-pointer"
                   />
                   <span className="text-[10px] font-bold text-spotify-muted">R</span>
                   {(settings.audioBalance ?? 0) !== 0 && (
@@ -573,12 +575,57 @@ export const SettingsView: React.FC = () => {
                           value={gain}
                           onChange={e => setEqBandGain(idx, Number(e.target.value))}
                           style={{ writingMode: 'vertical-lr', direction: 'rtl' }}
-                          className="h-24 w-4 accent-[#1ed760] cursor-pointer"
+                          className="h-24 w-4 accent-spotify-green cursor-pointer"
                         />
                         <span className="text-xs font-bold text-white/80">{formatBandLabel(hz)}</span>
                       </div>
                     );
                   })}
+                </div>
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Synced Lyrics Engine */}
+        {matches('lyrics', 'lrc', 'lrclib', 'online', 'local', 'karaoke', 'sync') && (
+          <section className="space-y-3">
+            <h2 className="text-base font-bold text-white flex items-center gap-2">
+              <Mic2 size={17} className="text-spotify-green" />
+              <span>Lyrics & Syncing</span>
+            </h2>
+
+            <div className="bg-[#181818] border border-white/10 rounded-xl divide-y divide-white/10">
+              <div className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-white">Lyrics Source</p>
+                  <p className="text-xs text-spotify-muted mt-0.5">
+                    Online auto-fetches duration-matched synced lyrics via LRCLIB and saves them offline; Local uses only .lrc/.txt or embedded tags
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 bg-[#242424] p-1 rounded-full border border-white/5 shrink-0">
+                  <button
+                    type="button"
+                    onClick={() => updateAudioSettings({ lyricsSource: 'online' })}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      (settings.lyricsSource || 'online') === 'online'
+                        ? 'bg-spotify-green text-black shadow-md'
+                        : 'text-spotify-muted hover:text-white'
+                    }`}
+                  >
+                    Online (LRCLIB + Local)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => updateAudioSettings({ lyricsSource: 'local' })}
+                    className={`px-3 py-1 rounded-full text-xs font-bold transition-all cursor-pointer ${
+                      settings.lyricsSource === 'local'
+                        ? 'bg-spotify-green text-black shadow-md'
+                        : 'text-spotify-muted hover:text-white'
+                    }`}
+                  >
+                    Local Only (.lrc)
+                  </button>
                 </div>
               </div>
             </div>
@@ -639,22 +686,22 @@ export const SettingsView: React.FC = () => {
                         <div
                           className={`w-24 h-16 rounded-[6px] border p-1.5 flex flex-col gap-1 transition-all ${
                             activeDensity === 'dense'
-                              ? 'border-2 border-[#1ed760] shadow-lg shadow-[#1ed760]/20 bg-[#121212]'
+                              ? 'border-2 border-spotify-green shadow-lg shadow-spotify-green/20 bg-[#121212]'
                               : 'border-white/20 bg-[#121212] group-hover:border-white/40'
                           }`}
                         >
                           <div className="grid grid-cols-4 gap-1">
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'dense' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
                           </div>
                           <div className="grid grid-cols-4 gap-1 flex-1">
                             {Array.from({ length: 12 }).map((_, i) => (
                               <div
                                 key={i}
                                 className={`rounded-[2px] ${
-                                  activeDensity === 'dense' ? 'bg-[#1ed760]' : 'bg-[#333333]'
+                                  activeDensity === 'dense' ? 'bg-spotify-green' : 'bg-[#333333]'
                                 }`}
                               />
                             ))}
@@ -679,22 +726,22 @@ export const SettingsView: React.FC = () => {
                         <div
                           className={`w-24 h-16 rounded-[6px] border p-1.5 flex flex-col gap-1.5 transition-all ${
                             activeDensity === 'default'
-                              ? 'border-2 border-[#1ed760] shadow-lg shadow-[#1ed760]/20 bg-[#121212]'
+                              ? 'border-2 border-spotify-green shadow-lg shadow-spotify-green/20 bg-[#121212]'
                               : 'border-white/20 bg-[#121212] group-hover:border-white/40'
                           }`}
                         >
                           <div className="grid grid-cols-4 gap-1">
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                            <div className={`h-1.5 rounded-[2px] ${activeDensity === 'default' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
                           </div>
                           <div className="grid grid-cols-3 gap-1 flex-1">
                             {Array.from({ length: 6 }).map((_, i) => (
                               <div
                                 key={i}
                                 className={`rounded-[2px] ${
-                                  activeDensity === 'default' ? 'bg-[#1ed760]' : 'bg-[#333333]'
+                                  activeDensity === 'default' ? 'bg-spotify-green' : 'bg-[#333333]'
                                 }`}
                               />
                             ))}
@@ -719,18 +766,18 @@ export const SettingsView: React.FC = () => {
                         <div
                           className={`w-24 h-16 rounded-[6px] border p-1.5 flex flex-col gap-1.5 transition-all ${
                             activeDensity === 'spacious'
-                              ? 'border-2 border-[#1ed760] shadow-lg shadow-[#1ed760]/20 bg-[#121212]'
+                              ? 'border-2 border-spotify-green shadow-lg shadow-spotify-green/20 bg-[#121212]'
                               : 'border-white/20 bg-[#121212] group-hover:border-white/40'
                           }`}
                         >
                           <div className="grid grid-cols-2 gap-1.5">
                             <div className="space-y-1">
-                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
+                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
                             </div>
                             <div className="space-y-1">
-                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
-                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-[#1ed760]' : 'bg-[#404040]'}`} />
+                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
+                              <div className={`h-1.5 rounded-[2px] ${activeDensity === 'spacious' ? 'bg-spotify-green' : 'bg-[#404040]'}`} />
                             </div>
                           </div>
                           <div className="grid grid-cols-3 gap-1.5 flex-1">
@@ -738,7 +785,7 @@ export const SettingsView: React.FC = () => {
                               <div
                                 key={i}
                                 className={`rounded-[2px] ${
-                                  activeDensity === 'spacious' ? 'bg-[#1ed760]' : 'bg-[#333333]'
+                                  activeDensity === 'spacious' ? 'bg-spotify-green' : 'bg-[#333333]'
                                 }`}
                               />
                             ))}
@@ -773,8 +820,8 @@ export const SettingsView: React.FC = () => {
                             >
                               <div className="w-6 h-6 flex items-center justify-center relative">
                                 {isSelected ? (
-                                  <div className="w-5 h-5 rounded-full border-2 border-[#1ed760] bg-[#181818] flex items-center justify-center shadow-md shadow-[#1ed760]/30 transition-all scale-110">
-                                    <div className="w-2 h-2 rounded-full bg-[#1ed760]" />
+                                  <div className="w-5 h-5 rounded-full border-2 border-spotify-green bg-[#181818] flex items-center justify-center shadow-md shadow-spotify-green/30 transition-all scale-110">
+                                    <div className="w-2 h-2 rounded-full bg-spotify-green" />
                                   </div>
                                 ) : (
                                   <div className="w-3.5 h-3.5 rounded-full border-2 border-white/30 bg-[#181818] group-hover:border-white group-hover:scale-125 transition-all" />
@@ -858,7 +905,7 @@ export const SettingsView: React.FC = () => {
                       step={1}
                       value={settings.hazyBlur ?? 45}
                       onChange={e => setHazyBlur(Number(e.target.value))}
-                      className="w-full h-2 bg-[#333] rounded-lg appearance-none cursor-pointer accent-[#1ed760]"
+                      className="w-full h-2 bg-[#333] rounded-lg appearance-none cursor-pointer accent-spotify-green"
                     />
 
                     <div className="flex justify-between text-[11px] text-spotify-muted font-medium">
@@ -894,6 +941,20 @@ export const SettingsView: React.FC = () => {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="p-4 flex items-center justify-between gap-4">
+                <div>
+                  <p className="text-sm font-semibold text-white">Dynamic Artwork Mood Tint</p>
+                  <p className="text-xs text-spotify-muted mt-0.5">
+                    Dynamically extracts the vibrant mood hue from current album artwork to tint controls, sliders & visualizers (or keep classic green when off)
+                  </p>
+                </div>
+                <SpotifySwitch
+                  checked={settings.dynamicAccentColor !== false}
+                  onChange={v => updateAudioSettings({ dynamicAccentColor: v })}
+                  ariaLabel="Dynamic Artwork Mood Tint"
+                />
               </div>
 
               <div className="p-4 flex items-center justify-between gap-4">
@@ -975,11 +1036,11 @@ export const SettingsView: React.FC = () => {
                 <div>
                   <p className="text-sm font-semibold text-white">Theater Audio Visualizer</p>
                   <p className="text-xs text-spotify-muted mt-0.5">
-                    Live frequency spectrum or waveform in fullscreen mode
+                    Live frequency spectrum, waveform, or fluid reactive glow ribbons in fullscreen mode
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
-                  {(['bars', 'waveform'] as const).map(st => (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {(['bars', 'waveform', 'fluid'] as const).map(st => (
                     <button
                       key={st}
                       onClick={() => updateAudioSettings({ visualizerStyle: st })}

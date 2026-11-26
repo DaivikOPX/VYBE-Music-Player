@@ -32,6 +32,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
   const {
     currentTrack,
     settings,
+    updateAudioSettings,
     abLoop,
     sleepTimer,
     sleepRemainingSec,
@@ -183,7 +184,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                 step={0.05}
                 value={settings.playbackRate}
                 onChange={e => setPlaybackRate(Number(e.target.value))}
-                className="w-full accent-[#1ed760] h-1 bg-white/20 rounded-lg cursor-pointer"
+                className="w-full accent-spotify-green h-1 bg-white/20 rounded-lg cursor-pointer"
               />
             </div>
 
@@ -202,7 +203,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                 step={1}
                 value={settings.crossfadeSec}
                 onChange={e => setCrossfadeSec(Number(e.target.value))}
-                className="w-full accent-[#1ed760] h-1 bg-white/20 rounded-lg cursor-pointer"
+                className="w-full accent-spotify-green h-1 bg-white/20 rounded-lg cursor-pointer"
               />
             </div>
 
@@ -333,7 +334,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                             writingMode: 'vertical-lr',
                             direction: 'rtl',
                           }}
-                          className="h-24 w-4 accent-[#1ed760] cursor-pointer"
+                          className="h-24 w-4 accent-spotify-green cursor-pointer"
                         />
                       </div>
                       <span className="text-[10px] font-bold text-white/80">
@@ -362,7 +363,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                   type="checkbox"
                   checked={Boolean(settings.hazyMode)}
                   onChange={e => setHazyMode(e.target.checked)}
-                  className="w-4 h-4 accent-[#1ed760] cursor-pointer"
+                  className="w-4 h-4 accent-spotify-green cursor-pointer"
                 />
               </label>
 
@@ -389,7 +390,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                     step={1}
                     value={settings.hazyBlur ?? 45}
                     onChange={e => setHazyBlur(Number(e.target.value))}
-                    className="w-full h-1.5 bg-[#4d4d4d] rounded-lg appearance-none cursor-pointer accent-[#1ed760]"
+                    className="w-full h-1.5 bg-[#4d4d4d] rounded-lg appearance-none cursor-pointer accent-spotify-green"
                   />
                   <div className="flex justify-between text-[10px] text-spotify-muted font-medium pt-0.5">
                     <span>0% (Transparent)</span>
@@ -425,6 +426,22 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
             </div>
 
             <label className="flex items-center justify-between p-2.5 rounded-lg bg-black/25 hover:bg-black/35 cursor-pointer">
+              <div className="flex items-start gap-2">
+                <Sparkles size={14} className="text-spotify-green mt-0.5 shrink-0" />
+                <div>
+                  <p className="text-xs font-bold text-white">Dynamic Artwork Mood Tint</p>
+                  <p className="text-[11px] text-spotify-muted">Match player accent to cover art</p>
+                </div>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.dynamicAccentColor !== false}
+                onChange={e => updateAudioSettings({ dynamicAccentColor: e.target.checked })}
+                className="w-4 h-4 accent-spotify-green cursor-pointer"
+              />
+            </label>
+
+            <label className="flex items-center justify-between p-2.5 rounded-lg bg-black/25 hover:bg-black/35 cursor-pointer">
               <div>
                 <p className="text-xs font-bold text-white">Compact Track List</p>
                 <p className="text-[11px] text-spotify-muted">Tighter rows to fit more songs</p>
@@ -433,7 +450,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                 type="checkbox"
                 checked={settings.compactMode}
                 onChange={e => setCompactMode(e.target.checked)}
-                className="w-4 h-4 accent-[#1ed760] cursor-pointer"
+                className="w-4 h-4 accent-spotify-green cursor-pointer"
               />
             </label>
 
@@ -449,7 +466,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
                 type="checkbox"
                 checked={settings.amoledMode}
                 onChange={e => setAmoledMode(e.target.checked)}
-                className="w-4 h-4 accent-[#1ed760] cursor-pointer"
+                className="w-4 h-4 accent-spotify-green cursor-pointer"
               />
             </label>
           </div>

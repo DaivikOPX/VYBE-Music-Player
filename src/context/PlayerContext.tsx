@@ -18,7 +18,13 @@ import {
 } from '../types';
 import { INITIAL_PLAYLISTS } from '../data/mockData';
 import { parseBrowserAudioFile } from '../utils/audioMetadata';
-import { extractDominantColor } from '../utils/colorExtract';
+import {
+  extractDominantColor,
+  extractAccentPalette,
+  buildVibrantPaletteFromHex,
+  DEFAULT_ACCENT_PALETTE
+} from '../utils/colorExtract';
+import { fetchOnlineLyrics, clearLyricsCacheForTrack } from '../utils/lyricsService';
 import { matchM3uTracks } from '../utils/playlistUtils';
 import {
   loadPersistedState,
@@ -91,7 +97,9 @@ const DEFAULT_SETTINGS: AudioSettings = {
   startOnBoot: false,
   globalShortcuts: true,
   visualizerStyle: 'bars',
-  zoomLevel: 100
+  zoomLevel: 100,
+  lyricsSource: 'online',
+  dynamicAccentColor: true
 };
 
 const DEFAULT_PROFILE: UserProfile = {
@@ -145,6 +153,10 @@ interface PlayerContextType {
 
   // Audio Tools State (A-B Loop, EQ, Speed, Crossfade, Sleep Timer)
   settings: AudioSettings;
+  activeAccentColor: string;
+  isFetchingLyrics: boolean;
+  lyricsStatusText: string | null;
+  fetchLyricsForTrack: (track: Track, force?: boolean) => Promise<boolean>;
   updateAudioSettings: (patch: Partial<AudioSettings>) => void;
   profile: UserProfile;
   updateProfile: (patch: Partial<UserProfile>) => void;
@@ -336,12 +348,15 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [repeatMode, setRepeatMode] = useState<'off' | 'all' | 'one'>('off');
 
   const [settings, setSettings] = useState<AudioSettings>(DEFAULT_SETTINGS);
+  const [activeAccentColor, setActiveAccentColor] = useState('#1ed760');
+  const [isFetchingLyrics, setIsFetchingLyrics] = useState(false);
+  const [lyricsStatusText, setLyricsStatusText] = useState<string | null>(null);
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_PROFILE);
   const [abLoop, setAbLoop] = useState<AbLoopState>({ a: null, b: null });
   const [sleepTimer, setSleepTimer] = useState<SleepTimerMode>(null);
   const [sleepRemainingSec, setSleepRemainingSec] = useState<number | null>(null);
 
-  // Dual audio decks for seamless crossfading + Web Audio EQ
+  // Dual audio decks for seamless crossfading + gapless preloading + Web Audio EQ
   const decksRef = useRef<[HTMLAudioElement, HTMLAudioElement] | null>(null);
   const activeDeckIdxRef = useRef<0 | 1>(0);
   const audioCtxRef = useRef<AudioContext | null>(null);
@@ -352,6 +367,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const analyserRef = useRef<AnalyserNode | null>(null);
   const deckGainNodesRef = useRef<[GainNode, GainNode] | null>(null);
   const crossfadeActiveRef = useRef(false);
+  const preloadedNextRef = useRef<{
+    forTrackId: string;
+    targetTrack: Track;
+    fromQueue: boolean;
+    deckIdx: 0 | 1;
+  } | null>(null);
+  const lyricsFetchAttemptedRef = useRef<Set<string>>(new Set());
 
   const tracksRef = useRef<Track[]>([]);
   const playlistsRef = useRef<Playlist[]>(INITIAL_PLAYLISTS);
@@ -668,6 +690,56 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       document.documentElement.style.removeProperty('--hazy-card-bg');
     }
   }, [settings.hazyMode, settings.hazyBlur, settings.zoomLevel]);
+
+  // Dynamic Artwork Mood Tinting (tints CSS accent variables from active album artwork)
+  useEffect(() => {
+    let cancelled = false;
+    const rootStyle = document.documentElement.style;
+
+    const resetAccent = () => {
+      rootStyle.removeProperty('--color-spotify-green');
+      rootStyle.removeProperty('--color-spotify-green-base');
+      rootStyle.removeProperty('--color-spotify-green-hover');
+      rootStyle.removeProperty('--color-spotify-green-press');
+      rootStyle.removeProperty('--vybe-mood-accent');
+      setActiveAccentColor(DEFAULT_ACCENT_PALETTE.accentHex);
+    };
+
+    if (settings.dynamicAccentColor === false || !currentTrack) {
+      resetAccent();
+      return;
+    }
+
+    const applyPalette = async () => {
+      let palette = DEFAULT_ACCENT_PALETTE;
+      if (currentTrack.coverUrl) {
+        palette = await extractAccentPalette(currentTrack.coverUrl);
+      } else if (currentTrack.accentColor && currentTrack.accentColor !== '#282828') {
+        palette = buildVibrantPaletteFromHex(currentTrack.accentColor);
+      }
+      if (cancelled) return;
+
+      if (
+        palette.accentHex === DEFAULT_ACCENT_PALETTE.accentHex &&
+        (!currentTrack.coverUrl || palette.moodHex === '#2a2a38')
+      ) {
+        resetAccent();
+        return;
+      }
+
+      rootStyle.setProperty('--color-spotify-green', palette.accentHex);
+      rootStyle.setProperty('--color-spotify-green-base', palette.accentHex);
+      rootStyle.setProperty('--color-spotify-green-hover', palette.accentHoverHex);
+      rootStyle.setProperty('--color-spotify-green-press', palette.moodHex);
+      rootStyle.setProperty('--vybe-mood-accent', palette.moodHex);
+      setActiveAccentColor(palette.accentHex);
+    };
+
+    void applyPalette();
+    return () => {
+      cancelled = true;
+    };
+  }, [settings.dynamicAccentColor, currentTrack?.id, currentTrack?.coverUrl, currentTrack?.accentColor]);
 
   // Listening time, hourly & session accumulator (every 1s while playing, unless privateSession)
   useEffect(() => {
@@ -1087,6 +1159,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const sessionId = ++playSessionRef.current;
     pendingSeekRef.current = null;
     crossfadeActiveRef.current = false;
+    preloadedNextRef.current = null;
     setAbLoop({ a: null, b: null });
     setCurrentTrack(track);
     if (list) setContextTracks(list);
@@ -1308,6 +1381,71 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         ) {
           crossfadeActiveRef.current = true;
           nextTrackRef.current(true, false);
+        } else if (
+          cf === 0 &&
+          settingsRef.current.gaplessPlayback !== false &&
+          repeatModeRef.current !== 'one' &&
+          !sleepTimerRef.current &&
+          Number.isFinite(deck.duration) &&
+          deck.duration > 5 &&
+          deck.duration - t <= 4.2 &&
+          decksRef.current
+        ) {
+          // Pre-buffer the next track on the idle audio deck for true 0ms gapless playback
+          const cur = currentTrackRef.current;
+          const idleIdx: 0 | 1 = idx === 0 ? 1 : 0;
+          if (cur && (!preloadedNextRef.current || preloadedNextRef.current.forTrackId !== cur.id)) {
+            let targetTrack: Track | null = null;
+            let fromQueue = false;
+            const q = queueRef.current;
+            if (q.length > 0) {
+              targetTrack = q[0];
+              fromQueue = true;
+            } else {
+              const pool = contextTracksRef.current.length > 0 ? contextTracksRef.current : tracksRef.current;
+              const curIdx = pool.findIndex(item => item.id === cur.id);
+              if (pool.length > 0 && curIdx >= 0) {
+                if (isShuffleRef.current && pool.length > 1) {
+                  let randIdx = curIdx;
+                  while (randIdx === curIdx) {
+                    randIdx = Math.floor(Math.random() * pool.length);
+                  }
+                  targetTrack = pool[randIdx];
+                } else if (curIdx + 1 < pool.length) {
+                  targetTrack = pool[curIdx + 1];
+                } else if (repeatModeRef.current === 'all') {
+                  targetTrack = pool[0];
+                }
+              }
+            }
+
+            if (targetTrack && targetTrack.audioUrl) {
+              const idleDeck = decksRef.current[idleIdx];
+              idleDeck.pause();
+              if (
+                targetTrack.audioUrl.startsWith('http://') ||
+                targetTrack.audioUrl.startsWith('https://') ||
+                targetTrack.audioUrl.startsWith('local-audio://')
+              ) {
+                idleDeck.crossOrigin = 'anonymous';
+              } else {
+                idleDeck.removeAttribute('crossorigin');
+              }
+              idleDeck.preload = 'auto';
+              idleDeck.src = targetTrack.audioUrl;
+              idleDeck.currentTime = 0;
+              idleDeck.muted = isMutedRef.current;
+              idleDeck.volume = isMutedRef.current ? 0 : volumeRef.current;
+              idleDeck.playbackRate = settingsRef.current.playbackRate;
+              idleDeck.load();
+              preloadedNextRef.current = {
+                forTrackId: cur.id,
+                targetTrack,
+                fromQueue,
+                deckIdx: idleIdx
+              };
+            }
+          }
         }
       };
       const onEnded = () => {
@@ -1329,7 +1467,62 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (repeatModeRef.current === 'one') {
           deck.currentTime = 0;
           deck.play().catch(() => setIsPlaying(false));
+        } else if (
+          settingsRef.current.crossfadeSec === 0 &&
+          settingsRef.current.gaplessPlayback !== false &&
+          preloadedNextRef.current &&
+          decksRef.current
+        ) {
+          const pre = preloadedNextRef.current;
+          const cur = currentTrackRef.current;
+          const idleDeck = decksRef.current[pre.deckIdx];
+          if (cur && pre.forTrackId === cur.id && pre.deckIdx !== idx && idleDeck.src && idleDeck.readyState >= 2) {
+            preloadedNextRef.current = null;
+            const sessionId = ++playSessionRef.current;
+            pendingSeekRef.current = null;
+            crossfadeActiveRef.current = false;
+            setAbLoop({ a: null, b: null });
+
+            activeDeckIdxRef.current = pre.deckIdx;
+            if (deckGainNodesRef.current && audioCtxRef.current) {
+              const now = audioCtxRef.current.currentTime;
+              deckGainNodesRef.current[0].gain.setValueAtTime(1, now);
+              deckGainNodesRef.current[1].gain.setValueAtTime(1, now);
+            }
+            idleDeck.muted = isMutedRef.current;
+            idleDeck.volume = isMutedRef.current ? 0 : volumeRef.current;
+            idleDeck.playbackRate = settingsRef.current.playbackRate;
+
+            if (pre.fromQueue) {
+              setQueue(prev => (prev[0]?.id === pre.targetTrack.id ? prev.slice(1) : prev));
+            }
+            setCurrentTrack(pre.targetTrack);
+            setCurrentTime(0);
+            setDuration(
+              Number.isFinite(idleDeck.duration) && idleDeck.duration > 0
+                ? idleDeck.duration
+                : pre.targetTrack.duration || 0
+            );
+            recordTrackPlay(pre.targetTrack.id);
+            if (settingsRef.current.desktopNotifications) {
+              window.electronAPI?.showNotification?.(
+                pre.targetTrack.title,
+                `${pre.targetTrack.artist} • ${pre.targetTrack.album}`
+              );
+            }
+            idleDeck.play().catch(err => {
+              if (playSessionRef.current !== sessionId) return;
+              if (err?.name !== 'AbortError') {
+                setIsPlaying(false);
+                showToast(`Could not play "${pre.targetTrack.title}"`);
+              }
+            });
+            return;
+          }
+          preloadedNextRef.current = null;
+          nextTrackRef.current(false, false);
         } else {
+          preloadedNextRef.current = null;
           nextTrackRef.current(false, false);
         }
       };
@@ -1368,7 +1561,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       cleanup1();
       void audioCtxRef.current?.close().catch(() => {});
     };
-  }, [showToast]);
+  }, [showToast, recordTrackPlay]);
 
   // Sleep Timer countdown interval
   useEffect(() => {
@@ -1453,6 +1646,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const toggleShuffle = useCallback(() => {
+    preloadedNextRef.current = null;
     setIsShuffle(prev => {
       showToast(!prev ? 'Shuffle enabled' : 'Shuffle disabled');
       return !prev;
@@ -1460,6 +1654,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [showToast]);
 
   const cycleRepeat = useCallback(() => {
+    preloadedNextRef.current = null;
     setRepeatMode(prev => {
       const next = prev === 'off' ? 'all' : prev === 'all' ? 'one' : 'off';
       showToast(next === 'off' ? 'Repeat off' : next === 'all' ? 'Repeat all' : 'Repeat one');
@@ -1747,6 +1942,46 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     },
     []
   );
+
+  const fetchLyricsForTrack = useCallback(
+    async (track: Track, force = false): Promise<boolean> => {
+      if (!track || (settingsRef.current.lyricsSource === 'local' && !force)) {
+        return false;
+      }
+      if (force) {
+        clearLyricsCacheForTrack(track.id);
+        lyricsFetchAttemptedRef.current.delete(track.id);
+      }
+      setIsFetchingLyrics(true);
+      setLyricsStatusText(null);
+      try {
+        const res = await fetchOnlineLyrics(track, force);
+        if (res && res.lines.length > 0) {
+          updateTrackLyrics(track.id, res.lines, track.lyricsOffsetSec || 0);
+          setLyricsStatusText(res.sourceLabel);
+          if (force) showToast(`Fetched lyrics (${res.sourceLabel})`);
+          return true;
+        }
+        if (force) showToast('No matching lyrics found on LRCLIB');
+        return false;
+      } finally {
+        setIsFetchingLyrics(false);
+      }
+    },
+    [updateTrackLyrics, showToast]
+  );
+
+  // Auto-fetch synced lyrics from LRCLIB when Online mode is selected and track lacks local lyrics
+  useEffect(() => {
+    setLyricsStatusText(null);
+    if (!currentTrack) return;
+    if (currentTrack.lyrics && currentTrack.lyrics.length > 0) return;
+    if (settings.lyricsSource === 'local') return;
+    if (lyricsFetchAttemptedRef.current.has(currentTrack.id)) return;
+
+    lyricsFetchAttemptedRef.current.add(currentTrack.id);
+    void fetchLyricsForTrack(currentTrack, false);
+  }, [currentTrack?.id, currentTrack?.lyrics?.length, settings.lyricsSource, fetchLyricsForTrack]);
 
   const checkMissingFiles = useCallback(async () => {
     if (window.electronAPI?.checkMissingFiles) {
@@ -2345,21 +2580,25 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [mapNativeItemsToTracks, addLocalTracksToLibrary, importBrowserAudioFiles]);
 
   const playNextInQueue = useCallback((track: Track) => {
+    preloadedNextRef.current = null;
     setQueue(prev => [track, ...prev]);
     showToast(`Playing "${track.title}" next`);
   }, [showToast]);
 
   const addToQueue = useCallback((track: Track) => {
+    preloadedNextRef.current = null;
     setQueue(prev => [...prev, track]);
     showToast(`Added "${track.title}" to queue`);
   }, [showToast]);
 
   const removeFromQueue = useCallback((index: number) => {
+    preloadedNextRef.current = null;
     setQueue(prev => prev.filter((_, i) => i !== index));
   }, []);
 
   const reorderQueue = useCallback((fromIdx: number, toIdx: number) => {
     if (fromIdx === toIdx) return;
+    preloadedNextRef.current = null;
     setQueue(prev => {
       const next = [...prev];
       const [moved] = next.splice(fromIdx, 1);
@@ -2370,11 +2609,13 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const clearQueue = useCallback(() => {
+    preloadedNextRef.current = null;
     setQueue([]);
     showToast('Queue cleared');
   }, [showToast]);
 
   const moveQueueItem = useCallback((fromIdx: number, toIdx: number) => {
+    preloadedNextRef.current = null;
     setQueue(prev => {
       if (fromIdx < 0 || fromIdx >= prev.length || toIdx < 0 || toIdx >= prev.length || fromIdx === toIdx) {
         return prev;
@@ -2387,6 +2628,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const shuffleQueue = useCallback(() => {
+    preloadedNextRef.current = null;
     setQueue(prev => {
       if (prev.length <= 1) return prev;
       const shuffled = [...prev];
@@ -2400,6 +2642,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, [showToast]);
 
   const reverseQueue = useCallback(() => {
+    preloadedNextRef.current = null;
     setQueue(prev => {
       if (prev.length <= 1) return prev;
       return [...prev].reverse();
@@ -2727,6 +2970,10 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         isShuffle,
         repeatMode,
         settings,
+        activeAccentColor,
+        isFetchingLyrics,
+        lyricsStatusText,
+        fetchLyricsForTrack,
         updateAudioSettings,
         profile,
         updateProfile,

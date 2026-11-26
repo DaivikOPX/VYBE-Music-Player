@@ -8,8 +8,8 @@
 *A studio-grade desktop, mobile, and web audio experience designed for true audiophiles.*
 
 [![Live Web Player](https://img.shields.io/badge/🌐_Web_Player-Launch_Online-1ed760?style=for-the-badge&logo=googlechrome&logoColor=white)](https://daivikopx.github.io/VYBE-Music-Player/)
-[![Download EXE](https://img.shields.io/badge/💾_Windows_Installer-.EXE_Download-0078D6?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Setup-1.0.0.exe)
-[![Download APK](https://img.shields.io/badge/📱_Android_App-.APK_Download-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/vybe-release.apk)
+[![GitHub Releases](https://img.shields.io/badge/📦_GitHub_Releases-Download_v1.0.0-0078D6?style=for-the-badge&logo=github&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases)
+[![Android APK](https://img.shields.io/badge/📱_Android_App-Download_APK-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases)
 
 [![Release](https://img.shields.io/badge/Release-v1.0.0-1ed760?style=for-the-badge&logo=music&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player/releases)
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Web%20%7C%20Android-blue?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player)
@@ -28,11 +28,11 @@ Enjoy VYBE seamlessly across all your devices:
 | Platform | Type | Direct Download / Access Link | Status |
 |:---|:---|:---|:---|
 | **🌐 Web Player** | **In-Browser PWA** | [👉 **Launch Live Web Player (daivikopx.github.io)**](https://daivikopx.github.io/VYBE-Music-Player/) | **Online** ✅ |
-| **💻 Windows** | **Standalone Installer (.exe)** | [📥 **Download VYBE-Setup-1.0.0.exe**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Setup-1.0.0.exe) | **Latest Release** 🚀 |
-| **💻 Windows** | **Portable (.exe)** | [📦 **Download VYBE-Portable-1.0.0.exe**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/VYBE-Portable-1.0.0.exe) | **No Install Needed** ⚡ |
-| **📱 Android** | **Package (.apk)** | [📱 **Download vybe-release.apk**](https://github.com/DaivikOPX/VYBE-Music-Player/releases/latest/download/vybe-release.apk) | **Ready** 🎵 |
+| **💻 Windows** | **Standalone Installer (.exe)** | [📥 **Download VYBE Setup 1.0.0.exe**](https://github.com/DaivikOPX/VYBE-Music-Player/releases) | **Available in Releases** 🚀 |
+| **💻 Windows** | **Portable (.exe)** | [📦 **Download VYBE 1.0.0.exe (Portable)**](https://github.com/DaivikOPX/VYBE-Music-Player/releases) | **No Install Needed** ⚡ |
+| **📱 Android** | **Package (.apk)** | [📱 **Download VYBE.apk**](https://github.com/DaivikOPX/VYBE-Music-Player/releases) | **Ready** 🎵 |
 
-> 💡 *All builds are self-contained and bundled directly with hardware acceleration and Web Audio DSP engine. You can also visit our [GitHub Releases](https://github.com/DaivikOPX/VYBE-Music-Player/releases) page for checksums, release notes, and all binaries.*
+> 💡 *To download the compiled Windows `.exe` and Android `.apk`, visit the [GitHub Releases page](https://github.com/DaivikOPX/VYBE-Music-Player/releases) where the binaries are hosted under Assets.*
 
 ---
 

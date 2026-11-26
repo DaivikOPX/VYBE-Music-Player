@@ -794,9 +794,9 @@ export const MainViewport: React.FC = () => {
               </div>
             </div>
 
-            {/* Home Filter Pills + Stats and Grid/List Toggle */}
+            {/* Home Filter Pills + Stats, Quick Actions, and Grid/List Toggle */}
             {tracks.length > 0 && (
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
                   {(
                     [
@@ -819,25 +819,54 @@ export const MainViewport: React.FC = () => {
                     </button>
                   ))}
                 </div>
-                <button
-                  onClick={() =>
-                    updateAudioSettings({
-                      viewMode: (settings.viewMode || 'grid') === 'grid' ? 'list' : 'grid',
-                    })
-                  }
-                  title={`Switch to ${(settings.viewMode || 'grid') === 'grid' ? 'List' : 'Grid'} view`}
-                  className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white shrink-0 cursor-pointer"
-                >
-                  {(settings.viewMode || 'grid') === 'grid' ? (
-                    <>
-                      <List size={14} /> <span>List</span>
-                    </>
-                  ) : (
-                    <>
-                      <LayoutGrid size={14} /> <span>Grid</span>
-                    </>
-                  )}
-                </button>
+
+                <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                  {/* Quick Action Pill Buttons */}
+                  <button
+                    onClick={() => void pickNativeAudioFiles()}
+                    className="bg-white hover:bg-white/90 text-black font-semibold text-xs px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 transition-transform hover:scale-105 cursor-pointer shadow-sm shrink-0"
+                    title="Import audio files"
+                  >
+                    <FileAudio size={14} />
+                    <span>Open Files</span>
+                  </button>
+                  <button
+                    onClick={() => void pickNativeAudioFolder()}
+                    className="bg-white/10 hover:bg-white/20 text-white font-semibold text-xs px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    title="Import music folder"
+                  >
+                    <FolderOpen size={14} />
+                    <span>Open Folder</span>
+                  </button>
+                  <button
+                    onClick={() => createPlaylist()}
+                    className="border border-white/25 hover:border-white text-white font-semibold text-xs px-3.5 py-1.5 rounded-full inline-flex items-center gap-1.5 transition-colors cursor-pointer shrink-0"
+                    title="Create new playlist"
+                  >
+                    <Plus size={14} />
+                    <span>Create Playlist</span>
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      updateAudioSettings({
+                        viewMode: (settings.viewMode || 'grid') === 'grid' ? 'list' : 'grid',
+                      })
+                    }
+                    title={`Switch to ${(settings.viewMode || 'grid') === 'grid' ? 'List' : 'Grid'} view`}
+                    className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-xs font-bold text-white shrink-0 cursor-pointer ml-1"
+                  >
+                    {(settings.viewMode || 'grid') === 'grid' ? (
+                      <>
+                        <List size={14} /> <span>List</span>
+                      </>
+                    ) : (
+                      <>
+                        <LayoutGrid size={14} /> <span>Grid</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </div>
             )}
 
@@ -927,24 +956,24 @@ export const MainViewport: React.FC = () => {
                   <p className="text-xs sm:text-sm text-spotify-muted mb-6 max-w-md mx-auto leading-relaxed">
                     Import audio files or music folders from your computer to enjoy seamless offline listening, lyrics, and live audio visualizers.
                   </p>
-                  <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 sm:gap-3 w-full max-w-lg mx-auto">
+                  <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-3 w-full max-w-lg mx-auto">
                     <button
                       onClick={() => void pickNativeAudioFiles()}
-                      className="w-full sm:w-auto bg-white hover:bg-white/90 text-black font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-transform hover:scale-105 cursor-pointer shadow-md"
+                      className="bg-white hover:bg-white/90 text-black font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-transform hover:scale-105 cursor-pointer shadow-md shrink-0"
                     >
                       <FileAudio size={16} />
                       <span>Open Files</span>
                     </button>
                     <button
                       onClick={() => void pickNativeAudioFolder()}
-                      className="w-full sm:w-auto bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="bg-white/10 hover:bg-white/20 text-white font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
                     >
                       <FolderOpen size={16} />
                       <span>Open Folder</span>
                     </button>
                     <button
                       onClick={() => createPlaylist()}
-                      className="w-full sm:w-auto border border-white/20 hover:border-white text-white font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                      className="border border-white/20 hover:border-white text-white font-bold text-sm px-5 py-2.5 rounded-full inline-flex items-center justify-center gap-2 transition-colors cursor-pointer shrink-0"
                     >
                       <Plus size={16} />
                       <span>Create Playlist</span>

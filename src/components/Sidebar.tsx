@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import {
   Plus,
   ArrowRight,
@@ -82,7 +83,9 @@ export const Sidebar: React.FC = () => {
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchText, setSearchText] = useState('');
   const [createMenuOpen, setCreateMenuOpen] = useState(false);
+  const [createMenuPos, setCreateMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [sortMenuPos, setSortMenuPos] = useState<{ top: number; left: number } | null>(null);
   const [dragOverPlaylistId, setDragOverPlaylistId] = useState<string | null>(null);
   const [dragOverFolderId, setDragOverFolderId] = useState<string | null>(null);
   const [expandedFolders, setExpandedFolders] = useState<Record<string, boolean>>({});
@@ -104,7 +107,10 @@ export const Sidebar: React.FC = () => {
 
   const isResizingRef = useRef(false);
   const menuRef = useRef<HTMLDivElement>(null);
-  const createMenuContainerRef = useRef<HTMLDivElement>(null);
+  const createMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const createMenuRef = useRef<HTMLDivElement>(null);
+  const sortMenuButtonRef = useRef<HTMLButtonElement>(null);
+  const sortMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const onMouseMove = (e: MouseEvent) => {
@@ -133,21 +139,83 @@ export const Sidebar: React.FC = () => {
 
   useEffect(() => {
     const closeMenus = (e: MouseEvent) => {
+      const target = e.target as Node;
       if (
-        createMenuContainerRef.current &&
-        !createMenuContainerRef.current.contains(e.target as Node)
+        createMenuButtonRef.current &&
+        !createMenuButtonRef.current.contains(target) &&
+        createMenuRef.current &&
+        !createMenuRef.current.contains(target)
       ) {
         setCreateMenuOpen(false);
+        setCreateMenuPos(null);
       }
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+      if (
+        sortMenuButtonRef.current &&
+        !sortMenuButtonRef.current.contains(target) &&
+        sortMenuRef.current &&
+        !sortMenuRef.current.contains(target)
+      ) {
         setSortMenuOpen(false);
+        setSortMenuPos(null);
       }
       setContextMenu(null);
       setFolderContextMenu(null);
     };
+
+    const handleResize = () => {
+      setCreateMenuOpen(false);
+      setCreateMenuPos(null);
+      setSortMenuOpen(false);
+      setSortMenuPos(null);
+    };
+
     window.addEventListener('mousedown', closeMenus);
-    return () => window.removeEventListener('mousedown', closeMenus);
+    window.addEventListener('resize', handleResize);
+    return () => {
+      window.removeEventListener('mousedown', closeMenus);
+      window.removeEventListener('resize', handleResize);
+    };
   }, []);
+
+  const handleToggleCreateMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (createMenuOpen) {
+      setCreateMenuOpen(false);
+      setCreateMenuPos(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 270;
+    // Align menu's left edge with button's left edge if it fits on screen:
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - 12) {
+      left = rect.right - menuWidth;
+    }
+    // Hard clamp to ensure it NEVER bleeds off either side of the viewport:
+    left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, left));
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 340);
+    setCreateMenuPos({ top, left });
+    setCreateMenuOpen(true);
+  };
+
+  const handleToggleSortMenu = (e: React.MouseEvent<HTMLButtonElement>) => {
+    e.stopPropagation();
+    if (sortMenuOpen) {
+      setSortMenuOpen(false);
+      setSortMenuPos(null);
+      return;
+    }
+    const rect = e.currentTarget.getBoundingClientRect();
+    const menuWidth = 220;
+    let left = rect.left;
+    if (left + menuWidth > window.innerWidth - 12) {
+      left = rect.right - menuWidth;
+    }
+    left = Math.max(12, Math.min(window.innerWidth - menuWidth - 12, left));
+    const top = Math.min(rect.bottom + 6, window.innerHeight - 320);
+    setSortMenuPos({ top, left });
+    setSortMenuOpen(true);
+  };
 
   const libraryPlaylists = playlists.filter(
     p => (p.isLikedSongs || p.isUserCreated || p.isLocalFiles || savedPlaylistIds.includes(p.id)) && !p.folderId
@@ -377,102 +445,122 @@ export const Sidebar: React.FC = () => {
 
             {!isCollapsed && (
               <div className="flex items-center gap-1">
-                <div ref={createMenuContainerRef} className="relative">
+                <div className="relative">
                   <button
-                    onClick={() => setCreateMenuOpen(prev => !prev)}
+                    ref={createMenuButtonRef}
+                    onClick={handleToggleCreateMenu}
                     title="Create playlist or folder"
                     className="w-8 h-8 rounded-full flex items-center justify-center text-spotify-muted hover:text-white hover:bg-[#1f1f1f] transition-all cursor-pointer"
                   >
                     <Plus size={18} />
                   </button>
 
-                  {createMenuOpen && (
-                    <div className="absolute right-0 top-10 w-72 bg-[#282828] rounded-lg shadow-2xl border border-white/10 p-1.5 text-sm text-white z-50 animate-in fade-in zoom-in-95 duration-100">
-                      <button
-                        onClick={() => {
-                          createPlaylist();
-                          setCreateMenuOpen(false);
+                  {createMenuOpen &&
+                    createMenuPos &&
+                    createPortal(
+                      <div
+                        ref={createMenuRef}
+                        onMouseDown={e => e.stopPropagation()}
+                        style={{
+                          position: 'fixed',
+                          top: `${createMenuPos.top}px`,
+                          left: `${createMenuPos.left}px`,
+                          width: '270px',
+                          zIndex: 9999,
                         }}
-                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        className="bg-[#242426] rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] border border-white/15 p-1.5 text-sm text-white animate-in fade-in zoom-in-95 duration-100 backdrop-blur-2xl select-none"
                       >
-                        <div className="w-10 h-10 rounded-full bg-[#3e3e3e]/80 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
-                          <CreatePlaylistMenuIcon size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-white">Playlist</p>
-                          <p className="text-[12px] text-spotify-muted">Create a playlist with songs or episodes</p>
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => {
+                            createPlaylist();
+                            setCreateMenuOpen(false);
+                            setCreateMenuPos(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-[#3e3e3e]/80 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
+                            <CreatePlaylistMenuIcon size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-white">Playlist</p>
+                            <p className="text-[12px] text-spotify-muted">Create a playlist with songs or episodes</p>
+                          </div>
+                        </button>
 
-                      <div className="my-1 border-t border-white/10" />
+                        <div className="my-1 border-t border-white/10" />
 
-                      <button
-                        onClick={() => {
-                          void pickNativeAudioFolder();
-                          setCreateMenuOpen(false);
-                        }}
-                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <FolderOpen size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-white">Import Music Folder</p>
-                          <p className="text-[12px] text-spotify-muted">Scan an entire music folder from your PC</p>
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => {
+                            void pickNativeAudioFolder();
+                            setCreateMenuOpen(false);
+                            setCreateMenuPos(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <FolderOpen size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-white">Import Music Folder</p>
+                            <p className="text-[12px] text-spotify-muted">Scan an entire music folder from your PC</p>
+                          </div>
+                        </button>
 
-                      <button
-                        onClick={() => {
-                          void pickNativeAudioFiles();
-                          setCreateMenuOpen(false);
-                        }}
-                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <FileAudio size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-white">Import Audio Files</p>
-                          <p className="text-[12px] text-spotify-muted">Select specific tracks</p>
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => {
+                            void pickNativeAudioFiles();
+                            setCreateMenuOpen(false);
+                            setCreateMenuPos(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <FileAudio size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-white">Import Audio Files</p>
+                            <p className="text-[12px] text-spotify-muted">Select specific tracks</p>
+                          </div>
+                        </button>
 
-                      <button
-                        onClick={() => {
-                          navigate({ name: 'folder-tree' });
-                          setCreateMenuOpen(false);
-                        }}
-                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
-                          <FolderTree size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-white">Folder Tree Explorer</p>
-                          <p className="text-[12px] text-spotify-muted">Browse directory hierarchy</p>
-                        </div>
-                      </button>
+                        <button
+                          onClick={() => {
+                            navigate({ name: 'folder-tree' });
+                            setCreateMenuOpen(false);
+                            setCreateMenuPos(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-spotify-green/20 text-spotify-green flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                            <FolderTree size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-white">Folder Tree Explorer</p>
+                            <p className="text-[12px] text-spotify-muted">Browse directory hierarchy</p>
+                          </div>
+                        </button>
 
-                      <div className="my-1 border-t border-white/10" />
+                        <div className="my-1 border-t border-white/10" />
 
-                      <button
-                        onClick={() => {
-                          createFolder();
-                          setCreateMenuOpen(false);
-                        }}
-                        className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
-                      >
-                        <div className="w-10 h-10 rounded-full bg-[#3e3e3e]/80 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
-                          <CreateFolderMenuIcon size={20} />
-                        </div>
-                        <div>
-                          <p className="font-bold text-[14px] text-white">Playlist Folder</p>
-                          <p className="text-[12px] text-spotify-muted">Organize your playlists</p>
-                        </div>
-                      </button>
-                    </div>
-                  )}
+                        <button
+                          onClick={() => {
+                            createFolder();
+                            setCreateMenuOpen(false);
+                            setCreateMenuPos(null);
+                          }}
+                          className="w-full px-3 py-2.5 rounded-md hover:bg-white/10 flex items-center gap-3 text-left cursor-pointer transition-colors group"
+                        >
+                          <div className="w-10 h-10 rounded-full bg-[#3e3e3e]/80 flex items-center justify-center text-white shrink-0 group-hover:scale-105 transition-transform">
+                            <CreateFolderMenuIcon size={20} />
+                          </div>
+                          <div>
+                            <p className="font-bold text-[14px] text-white">Playlist Folder</p>
+                            <p className="text-[12px] text-spotify-muted">Organize your playlists</p>
+                          </div>
+                        </button>
+                      </div>,
+                      document.body
+                    )}
                 </div>
 
                 <button
@@ -575,7 +663,8 @@ export const Sidebar: React.FC = () => {
 
               <div className="relative">
                 <button
-                  onClick={() => setSortMenuOpen(prev => !prev)}
+                  ref={sortMenuButtonRef}
+                  onClick={handleToggleSortMenu}
                   className="flex items-center gap-1.5 text-spotify-muted hover:text-white text-[13px] font-medium px-2 py-1 rounded transition-all cursor-pointer"
                 >
                   <span>
@@ -590,64 +679,79 @@ export const Sidebar: React.FC = () => {
                   <List size={16} />
                 </button>
 
-                {sortMenuOpen && (
-                  <div className="absolute right-0 top-8 w-52 bg-[#282828] rounded-md shadow-2xl border border-white/10 p-1.5 text-[13px] text-white z-50 animate-in fade-in zoom-in-95 duration-100">
-                    <div className="px-3 pt-1.5 pb-1 text-[11px] font-bold text-white/80">Sort by</div>
-                    {[
-                      { id: 'recents', label: 'Recents' },
-                      { id: 'recently-added', label: 'Recently added' },
-                      { id: 'alphabetical', label: 'Alphabetical' },
-                      { id: 'creator', label: 'Creator' },
-                    ].map(m => (
-                      <button
-                        key={m.id}
-                        onClick={() => {
-                          setSortMode(m.id as SortMode);
-                          localStorage.setItem('sidebar_sort_mode', m.id);
-                          setSortMenuOpen(false);
-                        }}
-                        className={`w-full px-3 py-2 rounded hover:bg-white/10 flex items-center justify-between cursor-pointer transition-colors ${
-                          sortMode === m.id ? 'text-spotify-green font-medium' : 'text-white'
-                        }`}
-                      >
-                        <span>{m.label}</span>
-                        {sortMode === m.id && <Check size={16} className="text-spotify-green stroke-[2.5]" />}
-                      </button>
-                    ))}
-
-                    <div className="my-1.5 border-t border-white/10" />
-
-                    <div className="px-3 pt-0.5 pb-1.5 text-[11px] font-bold text-white/70">View as</div>
-                    <div className="bg-[#181818] rounded-lg p-1 grid grid-cols-4 gap-1 mx-1.5 mb-1">
+                {sortMenuOpen &&
+                  sortMenuPos &&
+                  createPortal(
+                    <div
+                      ref={sortMenuRef}
+                      onMouseDown={e => e.stopPropagation()}
+                      style={{
+                        position: 'fixed',
+                        top: `${sortMenuPos.top}px`,
+                        left: `${sortMenuPos.left}px`,
+                        width: '220px',
+                        zIndex: 9999,
+                      }}
+                      className="bg-[#242426] rounded-xl shadow-[0_20px_60px_rgba(0,0,0,0.9)] border border-white/15 p-1.5 text-[13px] text-white animate-in fade-in zoom-in-95 duration-100 backdrop-blur-2xl select-none"
+                    >
+                      <div className="px-3 pt-1.5 pb-1 text-[11px] font-bold text-white/80">Sort by</div>
                       {[
-                        { id: 'compact', title: 'Compact list', icon: AlignJustify },
-                        { id: 'list', title: 'List view', icon: List },
-                        { id: 'grid', title: 'Compact grid', icon: Grid3X3 },
-                        { id: 'large-grid', title: 'Grid view', icon: Grid2X2 },
-                      ].map(v => {
-                        const IconComponent = v.icon;
-                        const isActive = sidebarViewMode === v.id;
-                        return (
-                          <button
-                            key={v.id}
-                            onClick={() => {
-                              setSidebarViewMode(v.id as SidebarViewMode);
-                              localStorage.setItem('sidebar_view_mode', v.id);
-                            }}
-                            title={v.title}
-                            className={`flex items-center justify-center py-1.5 rounded transition-colors cursor-pointer ${
-                              isActive
-                                ? 'bg-[#3e3e3e] text-spotify-green shadow-xs'
-                                : 'text-spotify-muted hover:text-white hover:bg-white/5'
-                            }`}
-                          >
-                            <IconComponent size={16} />
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                )}
+                        { id: 'recents', label: 'Recents' },
+                        { id: 'recently-added', label: 'Recently added' },
+                        { id: 'alphabetical', label: 'Alphabetical' },
+                        { id: 'creator', label: 'Creator' },
+                      ].map(m => (
+                        <button
+                          key={m.id}
+                          onClick={() => {
+                            setSortMode(m.id as SortMode);
+                            localStorage.setItem('sidebar_sort_mode', m.id);
+                            setSortMenuOpen(false);
+                            setSortMenuPos(null);
+                          }}
+                          className={`w-full px-3 py-2 rounded hover:bg-white/10 flex items-center justify-between cursor-pointer transition-colors ${
+                            sortMode === m.id ? 'text-spotify-green font-medium' : 'text-white'
+                          }`}
+                        >
+                          <span>{m.label}</span>
+                          {sortMode === m.id && <Check size={16} className="text-spotify-green stroke-[2.5]" />}
+                        </button>
+                      ))}
+
+                      <div className="my-1.5 border-t border-white/10" />
+
+                      <div className="px-3 pt-0.5 pb-1.5 text-[11px] font-bold text-white/70">View as</div>
+                      <div className="bg-[#181818] rounded-lg p-1 grid grid-cols-4 gap-1 mx-1.5 mb-1">
+                        {[
+                          { id: 'compact', title: 'Compact list', icon: AlignJustify },
+                          { id: 'list', title: 'List view', icon: List },
+                          { id: 'grid', title: 'Compact grid', icon: Grid3X3 },
+                          { id: 'large-grid', title: 'Grid view', icon: Grid2X2 },
+                        ].map(v => {
+                          const IconComponent = v.icon;
+                          const isActive = sidebarViewMode === v.id;
+                          return (
+                            <button
+                              key={v.id}
+                              onClick={() => {
+                                setSidebarViewMode(v.id as SidebarViewMode);
+                                localStorage.setItem('sidebar_view_mode', v.id);
+                              }}
+                              title={v.title}
+                              className={`flex items-center justify-center py-1.5 rounded transition-colors cursor-pointer ${
+                                isActive
+                                  ? 'bg-[#3e3e3e] text-spotify-green shadow-xs'
+                                  : 'text-spotify-muted hover:text-white hover:bg-white/5'
+                              }`}
+                            >
+                              <IconComponent size={16} />
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>,
+                    document.body
+                  )}
               </div>
             </div>
           )}

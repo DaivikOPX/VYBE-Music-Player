@@ -15,7 +15,7 @@
 [![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Web%20%7C%20Android-blue?style=for-the-badge&logo=windows&logoColor=white)](https://github.com/DaivikOPX/VYBE-Music-Player)
 [![License](https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge)](LICENSE)
 
-[⚡ Instant Downloads](#-instant-downloads--live-web-player) • [🌐 Web Player](https://daivikopx.github.io/VYBE-Music-Player/) • [Features](#-key-features) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Shortcuts](#-keyboard-shortcuts) • [Contributing](#-contributing)
+[⚡ Instant Downloads](#-instant-downloads--live-web-player) • [🌐 Web Player](https://daivikopx.github.io/VYBE-Music-Player/) • [Screenshots](#-preview--aesthetic) • [Features](#-key-features) • [Architecture](#-architecture) • [Getting Started](#-getting-started) • [Shortcuts](#-keyboard-shortcuts) • [Contributing](#-contributing)
 
 </div>
 
@@ -73,9 +73,13 @@ Whether you are listening to lossless FLACs, mastering with our 6-band biquad pa
 
 ## 📸 Preview & Aesthetic
 
-| Main Viewport & Library | Transparent Theme & Equalizer |
+| 🎚️ 6-Band Parametric Equalizer & Audio DSP | 🔍 Adaptive Density Zoom (70% - 130%) |
 |:---:|:---:|
-| Sleek desktop layout with quick access shelves and local folder management | Real-time audio DSP, Biquad EQ, dynamic album backdrop, and synced lyrics |
+| <img src="docs/screenshots/equalizer.png" alt="VYBE Equalizer & Audio Settings" width="460" /> | <img src="docs/screenshots/zoom_settings.png" alt="VYBE Adaptive Density Scaling" width="460" /> |
+
+| 📁 Offline Library & Local File Navigation |
+|:---:|
+| <img src="docs/screenshots/library_view.png" alt="VYBE Local Library Management" width="700" /> |
 
 ---
 

@@ -16,7 +16,7 @@
   "build": {
     "appId": "com.vybe.musicplayer",
     "productName": "VYBE",
-    "artifactName": "VYBE.${ext}",
+    "artifactName": "VYBE Setup.${ext}",
     "directories": {
       "output": "release"
     },
@@ -28,8 +28,15 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "portable"
+        "nsis"
       ]
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "VYBE"
     },
     "fileAssociations": [
       {

@@ -40,7 +40,6 @@ export const LyricsView: React.FC = () => {
   const lrcFileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
-  const animFrameRef = useRef<number | null>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -60,94 +59,63 @@ export const LyricsView: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [optionsMenuOpen]);
 
-  // Clean, high-performance single-pass calculation of currently playing line
+  // Robust calculation of currently playing line
   const activeLyricIdx = useMemo(() => {
     const lyrics = currentTrack?.lyrics;
     if (!lyrics || lyrics.length === 0) return -1;
     let active = -1;
+    let maxTime = -1;
     for (let i = 0; i < lyrics.length; i++) {
-      if (lyrics[i].time >= 0 && lyrics[i].time <= effectiveLyricsTime) {
+      const t = lyrics[i].time;
+      if (t >= 0 && t <= effectiveLyricsTime && t >= maxTime) {
         active = i;
-      } else if (lyrics[i].time > effectiveLyricsTime) {
-        break;
+        maxTime = t;
       }
     }
     return active;
   }, [currentTrack?.lyrics, effectiveLyricsTime]);
 
-  // Custom buttery-smooth physics-based scrolling with cubic-bezier ease-out
-  const smoothScrollToY = useCallback((targetY: number, duration = 520) => {
-    const container = scrollContainerRef.current;
-    if (!container) return;
-    const startY = container.scrollTop;
-    const distance = targetY - startY;
-    if (Math.abs(distance) < 1.5) return;
-
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-    }
-
-    const startTime = performance.now();
-    // Ease-out cubic curve: fast pickup with lush decel
-    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
-
-    const step = (now: number) => {
-      const elapsed = now - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      container.scrollTop = startY + distance * easeOutCubic(progress);
-
-      if (progress < 1) {
-        animFrameRef.current = requestAnimationFrame(step);
-      } else {
-        animFrameRef.current = null;
-      }
-    };
-
-    animFrameRef.current = requestAnimationFrame(step);
-  }, []);
-
-  // Center active lyric at the optical sweet spot (~38% down container)
+  // Center active lyric into view
   const scrollToActiveLine = useCallback(() => {
     if (activeLyricIdx < 0) return;
     const lineEl = lineRefs.current[activeLyricIdx];
-    const container = scrollContainerRef.current;
-    if (!lineEl || !container) return;
-
-    const targetY = Math.max(
-      0,
-      lineEl.offsetTop - (container.clientHeight * 0.38) + (lineEl.clientHeight / 2)
-    );
-    smoothScrollToY(targetY, 480);
-    setUserIsScrolling(false);
-  }, [activeLyricIdx, smoothScrollToY]);
+    if (lineEl) {
+      lineEl.scrollIntoView({
+        behavior: 'smooth',
+        block: 'center',
+        inline: 'nearest'
+      });
+      setUserIsScrolling(false);
+    }
+  }, [activeLyricIdx]);
 
   // Handle user manual scroll interaction: pause auto-scroll gracefully
   const handleUserScroll = useCallback(() => {
-    if (animFrameRef.current) {
-      cancelAnimationFrame(animFrameRef.current);
-      animFrameRef.current = null;
-    }
     setUserIsScrolling(true);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     userScrollTimeoutRef.current = setTimeout(() => {
       setUserIsScrolling(false);
-    }, 4500);
+    }, 4000);
   }, []);
 
-  // Auto-scroll when active line changes
+  // Reset user scroll lock when track changes
+  useEffect(() => {
+    setUserIsScrolling(false);
+  }, [currentTrack?.id]);
+
+  // AUTO-SCROLL AS THE SONG PLAYS!
   useEffect(() => {
     if (!userIsScrolling && activeLyricIdx >= 0) {
       const lineEl = lineRefs.current[activeLyricIdx];
-      const container = scrollContainerRef.current;
-      if (lineEl && container) {
-        const targetY = Math.max(
-          0,
-          lineEl.offsetTop - (container.clientHeight * 0.38) + (lineEl.clientHeight / 2)
-        );
-        smoothScrollToY(targetY, 520);
+      if (lineEl) {
+        lineEl.scrollIntoView({
+          behavior: 'smooth',
+          block: 'center',
+          inline: 'nearest'
+        });
       }
     }
-  }, [activeLyricIdx, userIsScrolling, smoothScrollToY]);
+  }, [activeLyricIdx, userIsScrolling]);
 
   // Harmonic color palette derived from track accent color for FluidAurora
   const auroraStops = useMemo<[string, string, string, string]>(() => {
@@ -178,7 +146,7 @@ export const LyricsView: React.FC = () => {
 
   return (
     <div
-      className="min-h-full relative overflow-hidden flex flex-col selection:bg-spotify-green selection:text-black"
+      className="h-full flex-1 relative overflow-hidden flex flex-col selection:bg-spotify-green selection:text-black"
       style={{
         background: settings.amoledMode ? '#000000' : '#121212',
       }}
@@ -453,7 +421,7 @@ export const LyricsView: React.FC = () => {
         ref={scrollContainerRef}
         onWheel={handleUserScroll}
         onTouchMove={handleUserScroll}
-        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar"
+        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar scroll-smooth"
       >
         <div className="max-w-3xl mx-auto">
           {hasLyrics ? (
@@ -470,6 +438,7 @@ export const LyricsView: React.FC = () => {
                     onClick={() => {
                       if (lineIsSynced) {
                         seek(Math.max(0, line.time - lyricsOffset));
+                        setUserIsScrolling(false);
                       }
                     }}
                     style={{

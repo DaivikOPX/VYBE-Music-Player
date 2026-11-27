@@ -125,7 +125,7 @@ export const MainViewport: React.FC = () => {
           : undefined
       }
     >
-      <div className="flex-1 overflow-y-auto">
+      <div className={`flex-1 ${route.name === 'lyrics' ? 'h-full overflow-hidden flex flex-col' : 'overflow-y-auto'}`}>
         {!['home', 'search', 'browse', 'library'].includes(route.name) && (
           <div className="md:hidden sticky top-0 z-30 flex items-center justify-between px-3 py-2 bg-black/75 backdrop-blur-xl border-b border-white/10">
             <button
@@ -144,7 +144,7 @@ export const MainViewport: React.FC = () => {
             </button>
           </div>
         )}
-        <div key={routeKey} className="min-h-full animate-view-enter">
+        <div key={routeKey} className={`${route.name === 'lyrics' ? 'h-full flex-1 flex flex-col overflow-hidden' : 'min-h-full'} animate-view-enter`}>
         {route.name === 'playlist' && <PlaylistView playlistId={route.id} />}
         {route.name === 'liked' && <PlaylistView playlistId="liked-songs" />}
         {route.name === 'artist' && <ArtistView artistId={route.id} />}

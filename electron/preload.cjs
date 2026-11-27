@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer, webUtils, webFrame } = require('electron');
 
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
+  isDev: Boolean(process.env.VITE_DEV_SERVER_URL),
   platform: process.platform,
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),

@@ -223,6 +223,7 @@ export interface NativeAudioItem {
 
 export interface ElectronBridgeAPI {
   isElectron: boolean;
+  isDev?: boolean;
   platform: string;
   minimize: () => void;
   maximize: () => void;

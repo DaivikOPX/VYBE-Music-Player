@@ -1128,17 +1128,23 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         }
       }
 
+      const isDevEnv =
+        Boolean(window.electronAPI?.isDev) ||
+        (typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'));
+
       const seenWelcome =
-        Boolean(saved?.hasCompletedWelcome) ||
-        (() => {
-          try {
-            return localStorage.getItem('vybe_welcome_completed_v1') === 'true';
-          } catch {
-            return false;
-          }
-        })();
+        !isDevEnv &&
+        (Boolean(saved?.hasCompletedWelcome) ||
+          (() => {
+            try {
+              return localStorage.getItem('vybe_welcome_completed_v1') === 'true';
+            } catch {
+              return false;
+            }
+          })());
       setHasCompletedWelcome(seenWelcome);
-      if (!seenWelcome) {
+      if (!seenWelcome || isDevEnv) {
         setIsWelcomeOpen(true);
       }
 

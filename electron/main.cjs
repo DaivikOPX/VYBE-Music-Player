@@ -206,15 +206,36 @@ async function parseAudioFileMeta(filePath) {
   const fileName = path.basename(normalizedPath);
   const ext = path.extname(fileName);
   const base = fileName.slice(0, fileName.length - ext.length).trim();
-  const dashIdx = base.indexOf(' - ');
-  let title = base || fileName;
+
+  // Strip leading track number patterns like '01 - ', '01. ', '01 ', '1-02 ', 'A1. '
+  const trackNumRe = /^\s*(?:cd\s*\d+[\s.-]*)?(?:\d{1,2}[-_])?\d{1,3}[\s._-]+/i;
+  const withoutTrackNum = base.replace(trackNumRe, '').trim();
+
+  let title = withoutTrackNum || base || fileName;
   let artist = 'Unknown Artist';
-  if (dashIdx > 0) {
-    artist = base.slice(0, dashIdx).trim() || 'Unknown Artist';
-    title = base.slice(dashIdx + 3).trim() || base;
+
+  const dashInClean = withoutTrackNum.indexOf(' - ');
+  const dashInBase = base.indexOf(' - ');
+
+  if (dashInClean > 0) {
+    const p1 = withoutTrackNum.slice(0, dashInClean).trim();
+    const p2 = withoutTrackNum.slice(dashInClean + 3).trim();
+    if (!/^\d+$/.test(p1) && !/^(?:track|audio|sound)\s*\d*$/i.test(p1)) {
+      artist = p1;
+      title = p2 || withoutTrackNum;
+    }
+  } else if (dashInBase > 0) {
+    const p1 = base.slice(0, dashInBase).trim();
+    const p2 = base.slice(dashInBase + 3).trim();
+    if (!/^\d+$/.test(p1) && !/^(?:track|audio|sound)\s*\d*$/i.test(p1)) {
+      artist = p1;
+      title = p2 || base;
+    }
   }
 
-  let album = path.basename(path.dirname(normalizedPath)) || 'Local Files';
+  const parentDir = path.basename(path.dirname(normalizedPath)) || 'Local Files';
+  const genericFolders = new Set(['downloads', 'download', 'music', 'songs', 'audio', 'desktop', 'documents', 'new folder', 'temp', 'local files', 'unknown', 'unknown album', 'tracks', 'files', 'mp3', 'media']);
+  let album = genericFolders.has(parentDir.toLowerCase().trim()) || /^\d+$/.test(parentDir.trim()) ? 'Local Files' : parentDir;
   let trackNumber;
   let year;
   let genre;
@@ -942,18 +963,37 @@ app.whenReady().then(() => {
         if (tags.year !== undefined && tags.year) id3Tags.year = String(tags.year);
         if (tags.trackNumber !== undefined && tags.trackNumber) id3Tags.trackNumber = String(tags.trackNumber);
         
-        // Write embedded album art / cover photo if provided as data URL
-        if (tags.coverDataUrl && typeof tags.coverDataUrl === 'string' && tags.coverDataUrl.startsWith('data:image/')) {
-          const match = tags.coverDataUrl.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
-          if (match) {
-            const mime = match[1];
-            const imgBuf = Buffer.from(match[2], 'base64');
-            id3Tags.image = {
-              mime: mime,
-              type: { id: 3, name: 'front cover' },
-              description: 'Front Cover',
-              imageBuffer: imgBuf
-            };
+        // Write embedded album art / cover photo if provided as data URL or HTTP/HTTPS URL
+        const coverInput = tags.coverDataUrl || tags.coverUrl;
+        if (coverInput && typeof coverInput === 'string') {
+          if (coverInput.startsWith('data:image/')) {
+            const match = coverInput.match(/^data:(image\/[a-zA-Z+]+);base64,(.+)$/);
+            if (match) {
+              const mime = match[1];
+              const imgBuf = Buffer.from(match[2], 'base64');
+              id3Tags.image = {
+                mime: mime,
+                type: { id: 3, name: 'front cover' },
+                description: 'Front Cover',
+                imageBuffer: imgBuf
+              };
+            }
+          } else if (coverInput.startsWith('http://') || coverInput.startsWith('https://')) {
+            try {
+              const res = await fetch(coverInput);
+              if (res.ok) {
+                const arrayBuf = await res.arrayBuffer();
+                const mime = res.headers.get('content-type') || 'image/jpeg';
+                id3Tags.image = {
+                  mime: mime.split(';')[0],
+                  type: { id: 3, name: 'front cover' },
+                  description: 'Front Cover',
+                  imageBuffer: Buffer.from(arrayBuf)
+                };
+              }
+            } catch (fetchErr) {
+              console.warn('Could not download cover art for ID3 embedding:', fetchErr);
+            }
           }
         }
         

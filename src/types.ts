@@ -240,7 +240,7 @@ export interface ElectronBridgeAPI {
   saveState: (state: PersistedAppState) => Promise<void>;
   showInExplorer: (filePath: string) => void;
   renameFile?: (oldPath: string, newFileName: string) => Promise<{ success: boolean; newPath?: string; newFileName?: string; error?: string }>;
-  writeId3Tags?: (filePath: string, tags: { title?: string; artist?: string; album?: string; genre?: string; year?: number | string; trackNumber?: number | string; coverDataUrl?: string }) => Promise<{ success: boolean; error?: string; format?: string }>;
+  writeId3Tags?: (filePath: string, tags: { title?: string; artist?: string; album?: string; genre?: string; year?: number | string; trackNumber?: number | string; coverDataUrl?: string; coverUrl?: string }) => Promise<{ success: boolean; error?: string; format?: string }>;
   findLocalCover?: (filePath: string) => Promise<string | null>;
   updatePlayState: (isPlaying: boolean, title?: string) => void;
   setCloseToTray?: (enabled: boolean) => void;

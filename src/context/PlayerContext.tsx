@@ -1904,6 +1904,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (t.sourceKey && t.sourceKey.toLowerCase().endsWith('.mp3')) {
             window.electronAPI.writeId3Tags(t.sourceKey, {
               ...patch,
+              coverUrl: patch.coverUrl,
               coverDataUrl: patch.coverUrl
             }).catch(() => {});
           }

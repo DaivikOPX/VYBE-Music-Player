@@ -7,16 +7,37 @@ const AUDIO_EXT_RE = /\.(mp3|wav|ogg|flac|m4a|aac|opus|webm|aiff|aif)$/i;
 
 export function parseFallbackFilename(fileName: string) {
   const base = fileName.replace(AUDIO_EXT_RE, '').trim();
-  const dashIdx = base.indexOf(' - ');
-  if (dashIdx > 0) {
-    return {
-      artist: base.slice(0, dashIdx).trim() || 'Unknown Artist',
-      title: base.slice(dashIdx + 3).trim() || base
-    };
+
+  // Strip leading track number patterns like '01 - ', '01. ', '01 ', '1-02 ', 'A1. '
+  const trackNumRe = /^\s*(?:cd\s*\d+[\s.-]*)?(?:\d{1,2}[-_])?\d{1,3}[\s._-]+/i;
+  const withoutTrackNum = base.replace(trackNumRe, '').trim();
+
+  let title = withoutTrackNum || base || fileName;
+  let artist = 'Unknown Artist';
+
+  // Check if stripped string has ' - ' separator
+  const dashInClean = withoutTrackNum.indexOf(' - ');
+  const dashInBase = base.indexOf(' - ');
+
+  if (dashInClean > 0) {
+    const p1 = withoutTrackNum.slice(0, dashInClean).trim();
+    const p2 = withoutTrackNum.slice(dashInClean + 3).trim();
+    if (!/^\d+$/.test(p1) && !/^(?:track|audio|sound)\s*\d*$/i.test(p1)) {
+      artist = p1;
+      title = p2 || withoutTrackNum;
+    }
+  } else if (dashInBase > 0) {
+    const p1 = base.slice(0, dashInBase).trim();
+    const p2 = base.slice(dashInBase + 3).trim();
+    if (!/^\d+$/.test(p1) && !/^(?:track|audio|sound)\s*\d*$/i.test(p1)) {
+      artist = p1;
+      title = p2 || base;
+    }
   }
+
   return {
-    artist: 'Unknown Artist',
-    title: base || fileName
+    artist: artist || 'Unknown Artist',
+    title: title || fileName
   };
 }
 

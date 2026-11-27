@@ -125,22 +125,31 @@ export const LyricsView: React.FC = () => {
     setUserIsScrolling(false);
   }, [currentTrack?.id]);
 
-  // BUTTERY AUTO-SCROLL TO ACTIVE LYRIC AT 40% VIEWPORT HEIGHT
+  // BUTTERY 60FPS SPRING-DAMPED AUTO-SCROLL TO ACTIVE LYRIC AT 40% VIEWPORT HEIGHT
   useEffect(() => {
-    if (!userIsScrolling && activeLyricIdx >= 0) {
-      const lineEl = lineRefs.current[activeLyricIdx];
-      const container = scrollContainerRef.current;
-      if (lineEl && container) {
-        const containerHeight = container.clientHeight;
-        const lineOffsetTop = lineEl.offsetTop;
-        const lineHeight = lineEl.clientHeight;
-        const targetScrollTop = lineOffsetTop - containerHeight * 0.40 + lineHeight / 2;
-        container.scrollTo({
-          top: Math.max(0, targetScrollTop),
-          behavior: 'smooth'
-        });
+    if (userIsScrolling || activeLyricIdx < 0) return;
+    const lineEl = lineRefs.current[activeLyricIdx];
+    const container = scrollContainerRef.current;
+    if (!lineEl || !container) return;
+
+    let rafId: number;
+    const targetTop = Math.max(
+      0,
+      lineEl.offsetTop - container.clientHeight * 0.40 + lineEl.clientHeight / 2
+    );
+
+    const step = () => {
+      const diff = targetTop - container.scrollTop;
+      if (Math.abs(diff) < 0.5) {
+        container.scrollTop = targetTop;
+        return;
       }
-    }
+      container.scrollTop += diff * 0.11;
+      rafId = requestAnimationFrame(step);
+    };
+
+    rafId = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(rafId);
   }, [activeLyricIdx, userIsScrolling]);
 
   // Primary accent color derived from track artwork or deterministic Spotify palette

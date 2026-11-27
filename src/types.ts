@@ -138,7 +138,9 @@ export interface AudioSettings {
   eqPreset: string;
   eqGains: number[]; // 6 bands: 60, 170, 400, 1000, 3000, 10000 Hz (-12 to +12 dB)
   crossfadeSec: number; // 0 to 12
-  playbackRate: number; // 0.75 to 2.0
+  playbackRate: number; // 0.5 to 2.0
+  pitchSemitones?: number; // -12 to +12
+  linkPitchTempo?: boolean; // vinyl/varispeed lock
   compactMode: boolean;
   amoledMode: boolean;
   hazyMode?: boolean;

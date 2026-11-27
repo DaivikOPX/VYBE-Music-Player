@@ -17,6 +17,7 @@ import {
   SmartRuleConfig
 } from '../types';
 import { INITIAL_PLAYLISTS } from '../data/mockData';
+import { createStereoPitchShifter, PitchShifterController } from '../utils/pitchShifter';
 import { parseBrowserAudioFile } from '../utils/audioMetadata';
 import {
   extractDominantColor,
@@ -81,6 +82,8 @@ const DEFAULT_SETTINGS: AudioSettings = {
   eqGains: [0, 0, 0, 0, 0, 0],
   crossfadeSec: 0,
   playbackRate: 1,
+  pitchSemitones: 0,
+  linkPitchTempo: false,
   compactMode: false,
   amoledMode: false,
   hazyMode: false,
@@ -179,6 +182,9 @@ interface PlayerContextType {
   deleteCustomEqPreset: (name: string) => void;
   setCrossfadeSec: (sec: number) => void;
   setPlaybackRate: (rate: number) => void;
+  setPitchSemitones: (semitones: number) => void;
+  setLinkPitchTempo: (linked: boolean) => void;
+  resetTempoAndPitch: () => void;
   setCompactMode: (v: boolean) => void;
   setAmoledMode: (v: boolean) => void;
   setHazyMode: (v: boolean) => void;
@@ -391,6 +397,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const pannerRef = useRef<StereoPannerNode | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const deckGainNodesRef = useRef<[GainNode, GainNode] | null>(null);
+  const pitchShifterRef = useRef<PitchShifterController | null>(null);
   const crossfadeActiveRef = useRef(false);
   const preloadedNextRef = useRef<{
     forTrackId: string;
@@ -582,10 +589,14 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         return f;
       });
 
+      const initialPitch = settingsRef.current.linkPitchTempo ? 0 : (settingsRef.current.pitchSemitones ?? 0);
+      const pitchShifter = createStereoPitchShifter(ctx, initialPitch);
+
       s0.connect(g0);
       s1.connect(g1);
-      g0.connect(filters[0]);
-      g1.connect(filters[0]);
+      g0.connect(pitchShifter.node);
+      g1.connect(pitchShifter.node);
+      pitchShifter.node.connect(filters[0]);
       for (let i = 0; i < filters.length - 1; i++) {
         filters[i].connect(filters[i + 1]);
       }
@@ -624,6 +635,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       pannerRef.current = panner;
       analyserRef.current = analyser;
       deckGainNodesRef.current = [g0, g1];
+      pitchShifterRef.current = pitchShifter;
     } catch {
       // Safe fallback: direct HTMLAudioElement playback without EQ
     }
@@ -842,14 +854,17 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => window.clearInterval(id);
   }, [isPlaying, settings.privateSession]);
 
-  // Sync playbackRate dynamically
+  // Sync playbackRate, preservesPitch, and real-time granular Pitch Shifter dynamically
   useEffect(() => {
-    if (!decksRef.current) return;
-    for (const deck of decksRef.current) {
-      deck.playbackRate = settings.playbackRate;
-      deck.preservesPitch = true;
+    const linked = Boolean(settings.linkPitchTempo);
+    if (decksRef.current) {
+      for (const deck of decksRef.current) {
+        deck.playbackRate = settings.playbackRate;
+        deck.preservesPitch = !linked;
+      }
     }
-  }, [settings.playbackRate]);
+    pitchShifterRef.current?.setSemitones(linked ? 0 : (settings.pitchSemitones ?? 0));
+  }, [settings.playbackRate, settings.pitchSemitones, settings.linkPitchTempo]);
 
   // Sync Liked Songs playlist
   useEffect(() => {
@@ -1344,6 +1359,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     targetDeck.muted = isMutedRef.current;
     targetDeck.volume = isMutedRef.current ? 0 : volumeRef.current;
     targetDeck.playbackRate = settingsRef.current.playbackRate;
+    targetDeck.preservesPitch = !settingsRef.current.linkPitchTempo;
     targetDeck.load();
 
     // Smooth crossfade using Web Audio GainNodes if available
@@ -1584,6 +1600,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               idleDeck.muted = isMutedRef.current;
               idleDeck.volume = isMutedRef.current ? 0 : volumeRef.current;
               idleDeck.playbackRate = settingsRef.current.playbackRate;
+              idleDeck.preservesPitch = !settingsRef.current.linkPitchTempo;
               idleDeck.load();
               preloadedNextRef.current = {
                 forTrackId: cur.id,
@@ -1639,6 +1656,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
             idleDeck.muted = isMutedRef.current;
             idleDeck.volume = isMutedRef.current ? 0 : volumeRef.current;
             idleDeck.playbackRate = settingsRef.current.playbackRate;
+            idleDeck.preservesPitch = !settingsRef.current.linkPitchTempo;
 
             if (pre.fromQueue) {
               setQueue(prev => (prev[0]?.id === pre.targetTrack.id ? prev.slice(1) : prev));
@@ -1706,6 +1724,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     return () => {
       cleanup0();
       cleanup1();
+      pitchShifterRef.current?.dispose();
+      pitchShifterRef.current = null;
       void audioCtxRef.current?.close().catch(() => {});
     };
   }, [showToast, recordTrackPlay]);
@@ -1878,7 +1898,45 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   }, []);
 
   const setPlaybackRate = useCallback((rate: number) => {
-    setSettings(prev => ({ ...prev, playbackRate: Math.max(0.5, Math.min(2, rate)) }));
+    const clamped = Math.max(0.5, Math.min(2, Number(rate.toFixed(2))));
+    setSettings(prev => ({
+      ...prev,
+      playbackRate: clamped,
+      ...(prev.linkPitchTempo ? { pitchSemitones: Number((12 * Math.log2(clamped)).toFixed(1)) } : {})
+    }));
+  }, []);
+
+  const setPitchSemitones = useCallback((semitones: number) => {
+    const clamped = Math.max(-12, Math.min(12, Math.round(semitones * 2) / 2));
+    setSettings(prev => {
+      if (prev.linkPitchTempo) {
+        const linkedRate = Math.max(0.5, Math.min(2, Number(Math.pow(2, clamped / 12).toFixed(2))));
+        return {
+          ...prev,
+          playbackRate: linkedRate,
+          pitchSemitones: Number((12 * Math.log2(linkedRate)).toFixed(1))
+        };
+      }
+      return { ...prev, pitchSemitones: clamped };
+    });
+  }, []);
+
+  const setLinkPitchTempo = useCallback((linked: boolean) => {
+    setSettings(prev => {
+      if (linked) {
+        const derivedSt = Number((12 * Math.log2(prev.playbackRate || 1)).toFixed(1));
+        return { ...prev, linkPitchTempo: true, pitchSemitones: derivedSt };
+      }
+      return { ...prev, linkPitchTempo: false };
+    });
+  }, []);
+
+  const resetTempoAndPitch = useCallback(() => {
+    setSettings(prev => ({
+      ...prev,
+      playbackRate: 1,
+      pitchSemitones: 0
+    }));
   }, []);
 
   const updateAudioSettings = useCallback((patch: Partial<AudioSettings>) => {
@@ -3315,6 +3373,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         deleteCustomEqPreset,
         setCrossfadeSec,
         setPlaybackRate,
+        setPitchSemitones,
+        setLinkPitchTempo,
+        resetTempoAndPitch,
         setCompactMode,
         setAmoledMode,
         setHazyMode,

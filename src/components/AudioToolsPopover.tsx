@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Sliders, Repeat, Timer, Sparkles, RotateCcw, X, Droplets } from 'lucide-react';
+import { Sliders, Repeat, Timer, Sparkles, RotateCcw, X, Droplets, Music2, Link2 } from 'lucide-react';
 import { usePlayer, EQ_BANDS, EQ_PRESETS } from '../context/PlayerContext';
 
 interface AudioToolsPopoverProps {
@@ -8,6 +8,7 @@ interface AudioToolsPopoverProps {
 }
 
 const SPEED_OPTIONS = [0.75, 1, 1.25, 1.5, 2];
+const PITCH_OPTIONS = [-5, -2, 0, 2, 5];
 const SLEEP_OPTIONS: { label: string; minutes: number | 'end-of-track' | null }[] = [
   { label: 'Off', minutes: null },
   { label: '15m', minutes: 15 },
@@ -42,6 +43,9 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
     deleteCustomEqPreset,
     setCrossfadeSec,
     setPlaybackRate,
+    setPitchSemitones,
+    setLinkPitchTempo,
+    resetTempoAndPitch,
     setCompactMode,
     setAmoledMode,
     setHazyMode,
@@ -102,7 +106,7 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
         ))}
       </div>
 
-      <div className="p-4 space-y-4 max-h-[340px] overflow-y-auto">
+      <div className="p-4 space-y-4 max-h-[min(440px,70vh)] overflow-y-auto custom-scrollbar">
         {activeTab === 'playback' && (
           <>
             {/* A-B Loop */}
@@ -151,41 +155,125 @@ export const AudioToolsPopover: React.FC<AudioToolsPopoverProps> = ({
               </div>
             </div>
 
-            {/* Playback Speed */}
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-white">Playback Speed</span>
-                <span className="text-spotify-green font-bold tabular-nums">
-                  {settings.playbackRate.toFixed(2).replace(/\.00$/, '')}x
-                </span>
-              </div>
-              <div className="flex gap-1">
-                {SPEED_OPTIONS.map(rate => {
-                  const active = Math.abs(settings.playbackRate - rate) < 0.01;
-                  return (
+            {/* Tempo & Pitch Studio Control */}
+            <div className="bg-black/25 rounded-lg p-3 space-y-3.5 border border-white/5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5 text-xs font-bold text-white">
+                  <Music2 size={13} className="text-spotify-green" />
+                  <span>Tempo &amp; Pitch</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {(Math.abs(settings.playbackRate - 1) > 0.01 || Math.abs(settings.pitchSemitones ?? 0) > 0.05) && (
                     <button
-                      key={rate}
-                      onClick={() => setPlaybackRate(rate)}
-                      className={`flex-1 h-7 rounded-md text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center leading-none ${
-                        active
-                          ? 'bg-spotify-green text-black'
-                          : 'bg-white/10 hover:bg-white/20 text-white'
-                      }`}
+                      onClick={resetTempoAndPitch}
+                      title="Reset Tempo & Pitch to Original"
+                      className="px-2 py-0.5 rounded bg-white/10 hover:bg-white/20 text-[10px] font-bold text-white/80 hover:text-white flex items-center gap-1 transition-colors cursor-pointer"
                     >
-                      {rate}x
+                      <RotateCcw size={10} />
+                      <span>Reset</span>
                     </button>
-                  );
-                })}
+                  )}
+                  <button
+                    onClick={() => setLinkPitchTempo(!settings.linkPitchTempo)}
+                    title={
+                      settings.linkPitchTempo
+                        ? 'Linked (Vinyl / Tape Varispeed: Tempo & Pitch move together)'
+                        : 'Unlinked (Independent Tempo & Pitch Shift)'
+                    }
+                    className={`px-2 py-0.5 rounded text-[10px] font-bold flex items-center gap-1 border transition-colors cursor-pointer ${
+                      settings.linkPitchTempo
+                        ? 'bg-spotify-green/20 text-spotify-green border-spotify-green/40'
+                        : 'bg-white/5 text-spotify-muted border-white/10 hover:text-white'
+                    }`}
+                  >
+                    <Link2 size={10} />
+                    <span>{settings.linkPitchTempo ? 'Vinyl Link' : 'Independent'}</span>
+                  </button>
+                </div>
               </div>
-              <input
-                type="range"
-                min={0.5}
-                max={2}
-                step={0.05}
-                value={settings.playbackRate}
-                onChange={e => setPlaybackRate(Number(e.target.value))}
-                className="w-full accent-spotify-green h-1 bg-white/20 rounded-lg cursor-pointer"
-              />
+
+              {/* Tempo (Speed) */}
+              <div className="space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="font-semibold text-white/90">Tempo (Speed)</span>
+                  <span className="text-spotify-green font-bold tabular-nums">
+                    {settings.playbackRate.toFixed(2).replace(/\.00$/, '')}x
+                  </span>
+                </div>
+                <div className="flex gap-1">
+                  {SPEED_OPTIONS.map(rate => {
+                    const active = Math.abs(settings.playbackRate - rate) < 0.01;
+                    return (
+                      <button
+                        key={rate}
+                        onClick={() => setPlaybackRate(rate)}
+                        className={`flex-1 h-7 rounded-md text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center leading-none ${
+                          active
+                            ? 'bg-spotify-green text-black'
+                            : 'bg-white/10 hover:bg-white/20 text-white'
+                        }`}
+                      >
+                        {rate}x
+                      </button>
+                    );
+                  })}
+                </div>
+                <input
+                  type="range"
+                  min={0.5}
+                  max={2}
+                  step={0.05}
+                  value={settings.playbackRate}
+                  onChange={e => setPlaybackRate(Number(e.target.value))}
+                  className="w-full accent-spotify-green h-1 bg-white/20 rounded-lg cursor-pointer"
+                />
+              </div>
+
+              {/* Pitch (Semitones) */}
+              {(() => {
+                const pitchVal = settings.linkPitchTempo
+                  ? Number((12 * Math.log2(settings.playbackRate || 1)).toFixed(1))
+                  : (settings.pitchSemitones ?? 0);
+                const pitchLabel =
+                  Math.abs(pitchVal) < 0.05
+                    ? '0 st (Original)'
+                    : `${pitchVal > 0 ? '+' : ''}${Number.isInteger(pitchVal) ? pitchVal : pitchVal.toFixed(1)} st`;
+                return (
+                  <div className="space-y-1.5 pt-2 border-t border-white/10">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-semibold text-white/90">Pitch Shift</span>
+                      <span className="text-spotify-green font-bold tabular-nums">{pitchLabel}</span>
+                    </div>
+                    <div className="flex gap-1">
+                      {PITCH_OPTIONS.map(st => {
+                        const active = Math.abs(pitchVal - st) < 0.15;
+                        return (
+                          <button
+                            key={st}
+                            onClick={() => setPitchSemitones(st)}
+                            className={`flex-1 h-7 rounded-md text-[11px] font-bold transition-colors cursor-pointer flex items-center justify-center leading-none ${
+                              active
+                                ? 'bg-spotify-green text-black'
+                                : 'bg-white/10 hover:bg-white/20 text-white'
+                            }`}
+                          >
+                            {st > 0 ? `+${st}` : st}
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <input
+                      type="range"
+                      min={-12}
+                      max={12}
+                      step={0.5}
+                      value={pitchVal}
+                      onChange={e => setPitchSemitones(Number(e.target.value))}
+                      className="w-full accent-spotify-green h-1 bg-white/20 rounded-lg cursor-pointer"
+                    />
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Crossfade */}

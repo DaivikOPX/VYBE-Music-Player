@@ -9,18 +9,14 @@
   "scripts": {
     "dev": "node electron/dev-runner.mjs",
     "dev:web": "vite",
-    "dev:electron": "node electron/dev-runner.mjs",
     "build": "tsc && vite build",
-    "build:all": "npm run build && electron-builder --win",
-    "preview": "vite preview",
-    "desktop": "node electron/dev-runner.mjs",
-    "desktop:build": "npm run build && electron-builder --win",
-    "desktop:portable": "npm run build && electron-builder --win portable",
-    "android:sync": "npm run build && npx cap sync android"
+    "build:exe": "npm run build && electron-builder --win",
+    "preview": "vite preview"
   },
   "build": {
     "appId": "com.vybe.musicplayer",
     "productName": "VYBE",
+    "artifactName": "VYBE.${ext}",
     "directories": {
       "output": "release"
     },
@@ -32,9 +28,7 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "dir",
-        "portable",
-        "nsis"
+        "portable"
       ]
     },
     "fileAssociations": [

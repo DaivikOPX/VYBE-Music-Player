@@ -275,8 +275,13 @@
   0%, 100% { transform: translate(0%, 0%) scale(1.05); }
   50% { transform: translate(-14%, -6%) scale(0.92); }
 }
+@keyframes rb-aurora-float-3 {
+  0%, 100% { transform: translate(0%, 0%) scale(0.95); }
+  50% { transform: translate(8%, -12%) scale(1.18); }
+}
 .animate-rb-aurora-1 { animation: rb-aurora-float-1 14s ease-in-out infinite; }
 .animate-rb-aurora-2 { animation: rb-aurora-float-2 18s ease-in-out infinite; }
+.animate-rb-aurora-3 { animation: rb-aurora-float-3 16s ease-in-out infinite; }
 
 @keyframes rb-star-movement-bottom {
   0% { transform: translate(0%, 0%); opacity: 1; }
@@ -345,7 +350,8 @@
   .animate-toast-in,
   .animate-rb-shine,
   .animate-rb-aurora-1,
-  .animate-rb-aurora-2 {
+  .animate-rb-aurora-2,
+  .animate-rb-aurora-3 {
     animation: none !important;
     transition: none !important;
   }

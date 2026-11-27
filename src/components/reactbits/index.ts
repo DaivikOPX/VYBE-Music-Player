@@ -2,6 +2,7 @@ export { SpotlightCard } from './SpotlightCard';
 export { TiltedCard } from './TiltedCard';
 export { GlareHover } from './GlareHover';
 export { Aurora } from './Aurora';
+export { FluidAurora } from './FluidAurora';
 export { BlurText } from './BlurText';
 export { ShinyText } from './ShinyText';
 export { CountUp } from './CountUp';

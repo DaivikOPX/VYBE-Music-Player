@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import {
   Heart,
   ChevronLeft,
@@ -12,15 +12,9 @@ import {
   Clock,
   TrendingUp,
   Settings,
-  Copy,
-  Maximize2,
   BarChart3,
-  FileText,
-  Pencil,
   LayoutGrid,
   List,
-  Globe,
-  Loader2,
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
 import { PlaylistView } from './PlaylistView';
@@ -31,14 +25,13 @@ import { SettingsView } from './SettingsView';
 import { SearchBrowseView } from './SearchBrowseView';
 import { StatsView } from './StatsView';
 import { FolderTreeView } from './FolderTreeView';
-import { parseLrcText } from '../utils/lrcParser';
 import { TrackRow } from './TrackRow';
+import { LyricsView } from './LyricsView';
 import { PlayTriangleIcon, Pause16Icon, EqualizerBars } from './SpotifyIcons';
 import { Track } from '../types';
 import {
   SpotlightCard,
   GlareHover,
-  Aurora,
   GradientText,
   StarBorder,
 } from './reactbits';
@@ -61,8 +54,6 @@ export const MainViewport: React.FC = () => {
     currentTrack,
     activePlaylistId,
     isPlaying,
-    currentTime,
-    seek,
     playPlaylist,
     playTrack,
     createPlaylist,
@@ -70,25 +61,14 @@ export const MainViewport: React.FC = () => {
     pickNativeAudioFolder,
     isRightDrawerOpen,
     toggleRightDrawer,
-    setIsTheaterMode,
-    updateTrackLyrics,
     updateAudioSettings,
-    showToast,
     settings,
     profile,
-    activeAccentColor,
-    isFetchingLyrics,
-    lyricsStatusText,
-    fetchLyricsForTrack,
   } = usePlayer();
 
   const [homeFilter, setHomeFilter] = useState<HomeFilter>('all');
   const [mobileLibTab, setMobileLibTab] = useState<'playlists' | 'albums' | 'artists'>('playlists');
   const [hoverAccent, setHoverAccent] = useState<string | null>(null);
-  const [lyricsEditOpen, setLyricsEditOpen] = useState(false);
-  const [lyricsDraft, setLyricsDraft] = useState('');
-  const lrcFileInputRef = useRef<HTMLInputElement>(null);
-  const activeLyricRef = useRef<HTMLParagraphElement>(null);
   const artistsScrollRef = useRef<HTMLDivElement>(null);
 
   const scrollArtists = (dir: 'left' | 'right') => {
@@ -97,27 +77,6 @@ export const MainViewport: React.FC = () => {
       artistsScrollRef.current.scrollBy({ left: amount, behavior: 'smooth' });
     }
   };
-
-  const lyricsOffset = currentTrack?.lyricsOffsetSec || 0;
-  const effectiveLyricsTime = currentTime + lyricsOffset;
-
-  const activeLyricIdx = (() => {
-    if (route.name !== 'lyrics' || !currentTrack?.lyrics?.length) return -1;
-    const lyrics = currentTrack.lyrics;
-    for (let i = 0; i < lyrics.length; i++) {
-      const line = lyrics[i];
-      if (line.time < 0) continue;
-      const nextSynced = lyrics.slice(i + 1).find(l => l.time >= 0)?.time ?? Infinity;
-      if (effectiveLyricsTime >= line.time && effectiveLyricsTime < nextSynced) return i;
-    }
-    return -1;
-  })();
-
-  useEffect(() => {
-    if (route.name === 'lyrics' && activeLyricIdx >= 0) {
-      activeLyricRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
-  }, [route.name, activeLyricIdx, currentTrack?.id]);
 
   const routeKey =
     route.name === 'playlist' || route.name === 'artist'
@@ -444,290 +403,7 @@ export const MainViewport: React.FC = () => {
         )}
 
         {/* LYRICS VIEW */}
-        {route.name === 'lyrics' && (
-          <div
-            className="min-h-full px-6 md:px-16 py-12 relative overflow-hidden"
-            style={{
-              background: `linear-gradient(to bottom, ${currentTrack?.accentColor || '#2e1065'}, ${baseBg})`,
-            }}
-          >
-            {!settings.amoledMode && settings.animationsEnabled !== false && (
-              <Aurora
-                colorStops={[currentTrack?.accentColor || '#6d28d9', activeAccentColor, '#1e3a8a']}
-                className="opacity-35"
-              />
-            )}
-            {currentTrack ? (
-              <div className="max-w-2xl mx-auto relative z-10">
-                <div className="flex items-center justify-between gap-4 mb-8">
-                  <div className="flex items-center gap-4 min-w-0">
-                    <div className="w-14 h-14 rounded bg-[#282828] flex items-center justify-center overflow-hidden shadow-lg shrink-0">
-                      {currentTrack.coverUrl ? (
-                        <img
-                          src={currentTrack.coverUrl}
-                          alt={currentTrack.title}
-                          className="w-full h-full object-cover"
-                        />
-                      ) : (
-                        <Music size={22} className="text-spotify-muted" />
-                      )}
-                    </div>
-                    <div className="min-w-0">
-                      <h1 className="text-xl font-bold text-white truncate">{currentTrack.title}</h1>
-                      <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                        <p className="text-sm text-white/75 truncate">{currentTrack.artist}</p>
-                        {isFetchingLyrics && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-white/15 text-white animate-pulse">
-                            <Loader2 size={10} className="animate-spin" />
-                            <span>Fetching LRCLIB...</span>
-                          </span>
-                        )}
-                        {!isFetchingLyrics && lyricsStatusText && (
-                          <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-full bg-spotify-green/20 text-spotify-green">
-                            <Globe size={10} />
-                            <span>{lyricsStatusText}</span>
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 shrink-0">
-                    {settings.lyricsSource !== 'local' && (
-                      <button
-                        onClick={() => void fetchLyricsForTrack(currentTrack, true)}
-                        disabled={isFetchingLyrics}
-                        title="Fetch or re-sync lyrics online via LRCLIB"
-                        className="px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 disabled:opacity-50 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
-                      >
-                        {isFetchingLyrics ? <Loader2 size={13} className="animate-spin" /> : <Globe size={13} />}
-                        <span>{currentTrack.lyrics?.length ? 'Re-fetch' : 'Fetch Online'}</span>
-                      </button>
-                    )}
-                    <input
-                      ref={lrcFileInputRef}
-                      type="file"
-                      accept=".lrc,.txt"
-                      className="hidden"
-                      onChange={async e => {
-                        const f = e.target.files?.[0];
-                        e.target.value = '';
-                        if (!f || !currentTrack) return;
-                        const text = await f.text().catch(() => '');
-                        if (text) {
-                          const parsed = parseLrcText(text);
-                          updateTrackLyrics(currentTrack.id, parsed, currentTrack.lyricsOffsetSec || 0);
-                          showToast(`Loaded lyrics from "${f.name}"`);
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={() => lrcFileInputRef.current?.click()}
-                      title="Load .lrc or .txt lyrics file"
-                      className="px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <FileText size={13} />
-                      <span>Load .lrc/.txt</span>
-                    </button>
-                    <button
-                      onClick={() => {
-                        const raw = (currentTrack.lyrics || [])
-                          .map(l => {
-                            if (l.time < 0) return l.text;
-                            const m = Math.floor(l.time / 60);
-                            const s = (l.time % 60).toFixed(2).padStart(5, '0');
-                            return `[${String(m).padStart(2, '0')}:${s}] ${l.text}`;
-                          })
-                          .join('\n');
-                        setLyricsDraft(raw);
-                        setLyricsEditOpen(p => !p);
-                      }}
-                      title="Edit lyrics"
-                      className="px-2.5 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold inline-flex items-center gap-1 cursor-pointer"
-                    >
-                      <Pencil size={13} />
-                      <span>Edit</span>
-                    </button>
-                    {currentTrack.lyrics && currentTrack.lyrics.length > 0 && (
-                      <div className="flex items-center gap-1 bg-white/10 rounded-full px-2 py-1 text-[11px] font-bold">
-                        <button
-                          onClick={() =>
-                            updateTrackLyrics(
-                              currentTrack.id,
-                              currentTrack.lyrics || [],
-                              Number((lyricsOffset - 0.5).toFixed(1))
-                            )
-                          }
-                          title="Delay lyrics (-0.5s)"
-                          className="px-1.5 hover:text-spotify-green cursor-pointer"
-                        >
-                          -0.5s
-                        </button>
-                        <span className="text-white/80 tabular-nums px-1">
-                          {lyricsOffset === 0 ? 'Sync' : `${lyricsOffset > 0 ? '+' : ''}${lyricsOffset}s`}
-                        </span>
-                        <button
-                          onClick={() =>
-                            updateTrackLyrics(
-                              currentTrack.id,
-                              currentTrack.lyrics || [],
-                              Number((lyricsOffset + 0.5).toFixed(1))
-                            )
-                          }
-                          title="Advance lyrics (+0.5s)"
-                          className="px-1.5 hover:text-spotify-green cursor-pointer"
-                        >
-                          +0.5s
-                        </button>
-                      </div>
-                    )}
-                    {currentTrack.lyrics && currentTrack.lyrics.length > 0 && (
-                      <button
-                        onClick={() => {
-                          const text = currentTrack.lyrics?.map(l => l.text).join('\n') || '';
-                          void navigator.clipboard?.writeText(text).then(() => showToast('Lyrics copied'));
-                        }}
-                        title="Copy lyrics"
-                        className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
-                      >
-                        <Copy size={14} />
-                      </button>
-                    )}
-                    <button
-                      onClick={() => setIsTheaterMode(true)}
-                      title="Fullscreen"
-                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 text-white cursor-pointer"
-                    >
-                      <Maximize2 size={14} />
-                    </button>
-                  </div>
-                </div>
-
-                {lyricsEditOpen && (
-                  <div className="mb-6 p-4 rounded-xl bg-black/50 border border-white/15 space-y-3">
-                    <p className="text-xs font-bold text-white">
-                      Edit Lyrics (supports plain text or [mm:ss.xx] LRC timestamps)
-                    </p>
-                    <textarea
-                      rows={8}
-                      value={lyricsDraft}
-                      onChange={e => setLyricsDraft(e.target.value)}
-                      placeholder="[00:12.00] First line of lyrics..."
-                      className="w-full bg-[#181818] text-white text-xs p-3 rounded-lg border border-white/10 focus:outline-none font-mono"
-                    />
-                    <div className="flex justify-end gap-2">
-                      <button
-                        onClick={() => setLyricsEditOpen(false)}
-                        className="px-4 py-1.5 rounded-full text-xs font-bold text-white/70 hover:text-white cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        onClick={() => {
-                          const parsed = parseLrcText(lyricsDraft);
-                          updateTrackLyrics(currentTrack.id, parsed, lyricsOffset);
-                          setLyricsEditOpen(false);
-                          showToast('Lyrics saved');
-                        }}
-                        className="px-5 py-1.5 rounded-full bg-spotify-green text-black text-xs font-bold cursor-pointer"
-                      >
-                        Save Lyrics
-                      </button>
-                    </div>
-                  </div>
-                )}
-
-                {currentTrack.lyrics && currentTrack.lyrics.length > 0 ? (
-                  <div className="space-y-5 pb-12">
-                    {currentTrack.lyrics.map((line, i) => {
-                      const isSynced = line.time >= 0;
-                      const nextSynced =
-                        currentTrack.lyrics?.slice(i + 1).find(l => l.time >= 0)?.time ?? Infinity;
-                      const isActive =
-                        isSynced && effectiveLyricsTime >= line.time && effectiveLyricsTime < nextSynced;
-
-                      return (
-                        <p
-                          key={i}
-                          ref={isActive ? activeLyricRef : undefined}
-                          onClick={() => {
-                            if (isSynced) seek(Math.max(0, line.time - lyricsOffset));
-                          }}
-                          className={`text-2xl md:text-3xl font-bold transition-all duration-300 origin-left ${
-                            isSynced
-                              ? `cursor-pointer ${
-                                  isActive
-                                    ? 'text-white scale-[1.03]'
-                                    : 'text-white/40 hover:text-white/80'
-                                }`
-                              : 'text-white/90'
-                          }`}
-                        >
-                          {line.text}
-                        </p>
-                      );
-                    })}
-                  </div>
-                ) : (
-                  <div className="py-16 text-center text-white/75 space-y-4">
-                    {isFetchingLyrics ? (
-                      <>
-                        <Loader2 size={32} className="mx-auto animate-spin text-spotify-green" />
-                        <p className="text-lg font-bold">Searching LRCLIB for synced lyrics...</p>
-                        <p className="text-xs text-white/50">
-                          Matching track title, artist & exact duration ({Math.round(currentTrack.duration || 0)}s)
-                        </p>
-                      </>
-                    ) : (
-                      <>
-                        <div>
-                          <p className="text-xl font-bold mb-2">
-                            {settings.lyricsSource === 'local'
-                              ? 'Local-only lyrics mode active'
-                              : 'No lyrics found for this track'}
-                          </p>
-                          <p className="text-sm text-white/50">
-                            {settings.lyricsSource === 'local'
-                              ? 'Place a matching .lrc/.txt file next to your song, or switch to Online Lyrics.'
-                              : 'Try loading a local .lrc/.txt file, editing manually, or re-fetching online.'}
-                          </p>
-                        </div>
-                        <div className="flex flex-wrap items-center justify-center gap-2">
-                          {settings.lyricsSource === 'local' ? (
-                            <button
-                              onClick={() => {
-                                updateAudioSettings({ lyricsSource: 'online' });
-                                void fetchLyricsForTrack(currentTrack, true);
-                              }}
-                              className="px-4 py-2 rounded-full bg-spotify-green text-black text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer hover:scale-105 transition-transform"
-                            >
-                              <Globe size={14} />
-                              <span>Enable Online Lyrics & Fetch</span>
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => void fetchLyricsForTrack(currentTrack, true)}
-                              className="px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-                            >
-                              <Globe size={14} />
-                              <span>Retry Online Search</span>
-                            </button>
-                          )}
-                          <button
-                            onClick={() => lrcFileInputRef.current?.click()}
-                            className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-bold inline-flex items-center gap-1.5 cursor-pointer"
-                          >
-                            <FileText size={14} />
-                            <span>Load .lrc / .txt</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                )}
-              </div>
-            ) : null}
-          </div>
-        )}
+        {route.name === 'lyrics' && <LyricsView />}
 
         {/* HOME VIEW — CLEAN ZERO-RECOMMENDATIONS OFFLINE PLAYER */}
         {route.name === 'home' && (

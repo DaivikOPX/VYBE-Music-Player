@@ -793,25 +793,38 @@ export const TheaterMode: React.FC = () => {
         </div>
       ) : (
         /* Synced Real-Time Lyrics View */
-        <div className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-6 text-center select-text no-scrollbar max-h-[60vh]">
+        <div className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-7 text-center select-text no-scrollbar max-h-[60vh] scroll-smooth">
           {currentTrack.lyrics && currentTrack.lyrics.length > 0 ? (
             currentTrack.lyrics.map((line, idx) => {
               const isActive = idx === activeLyricIdx;
+              const distance = activeLyricIdx >= 0 ? Math.abs(activeLyricIdx - idx) : 0;
+              const lineIsSynced = line.time >= 0;
+              const offset = currentTrack.lyricsOffsetSec || 0;
+
+              let depthClass = '';
+              if (isActive) {
+                depthClass = 'text-white scale-[1.04] opacity-100 drop-shadow-[0_0_36px_rgba(255,255,255,0.7)] font-black';
+              } else if (distance === 1) {
+                depthClass = 'text-white/60 blur-[0.3px] hover:blur-0 hover:text-white/80 scale-[1.01]';
+              } else if (distance === 2) {
+                depthClass = 'text-white/35 blur-[0.8px] hover:blur-0 hover:text-white/70 scale-100';
+              } else {
+                depthClass = 'text-white/20 blur-[1.2px] hover:blur-0 hover:text-white/50 scale-100';
+              }
+
               return (
                 <p
                   key={idx}
                   ref={isActive ? activeLyricRef : null}
                   onClick={() => {
-                    if (line.time >= 0) seek(line.time);
+                    if (lineIsSynced) seek(Math.max(0, line.time - offset));
                   }}
-                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold transition-all duration-300 cursor-pointer ${
-                    isActive
-                      ? 'text-white scale-105 opacity-100 drop-shadow-[0_0_24px_rgba(255,255,255,0.7)]'
-                      : 'text-white/35 hover:text-white/70 scale-100'
-                  }`}
+                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold transition-all duration-300 ${
+                    lineIsSynced ? 'cursor-pointer' : ''
+                  } ${depthClass}`}
                   style={
                     isActive && currentTrack.accentColor
-                      ? { textShadow: `0 0 30px ${currentTrack.accentColor}cc` }
+                      ? { textShadow: `0 0 35px ${currentTrack.accentColor}dd` }
                       : undefined
                   }
                 >

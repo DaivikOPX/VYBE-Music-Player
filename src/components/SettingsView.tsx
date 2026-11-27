@@ -92,6 +92,7 @@ export const SettingsView: React.FC = () => {
     importLibraryBackup,
     clearListeningHistory,
     setIsShortcutsOpen,
+    openWelcomeTour,
     navigate,
   } = usePlayer();
 
@@ -1486,13 +1487,22 @@ export const SettingsView: React.FC = () => {
                     </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setIsShortcutsOpen(true)}
-                  className="px-4 py-2 rounded-full bg-white hover:bg-white/90 text-black text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-104 shrink-0"
-                >
-                  <Keyboard size={14} />
-                  <span>View All Shortcuts</span>
-                </button>
+                <div className="flex flex-wrap items-center gap-2 shrink-0">
+                  <button
+                    onClick={openWelcomeTour}
+                    className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-white text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition-all hover:scale-104"
+                  >
+                    <Sparkles size={14} className="text-spotify-green" />
+                    <span>Replay Welcome Tour</span>
+                  </button>
+                  <button
+                    onClick={() => setIsShortcutsOpen(true)}
+                    className="px-4 py-2 rounded-full bg-white hover:bg-white/90 text-black text-xs font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer shadow-md transition-all hover:scale-104"
+                  >
+                    <Keyboard size={14} />
+                    <span>View All Shortcuts</span>
+                  </button>
+                </div>
               </div>
             </div>
           </section>

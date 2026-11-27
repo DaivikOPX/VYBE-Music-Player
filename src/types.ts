@@ -196,6 +196,7 @@ export interface PersistedAppState {
   settings: AudioSettings;
   profile?: UserProfile;
   cachedTracks?: Track[];
+  hasCompletedWelcome?: boolean;
 }
 
 export interface NativeAudioItem {

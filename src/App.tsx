@@ -11,6 +11,7 @@ import { PlayerBar } from './components/PlayerBar';
 import { AudioToolsPopover } from './components/AudioToolsPopover';
 import { TheaterMode } from './components/TheaterMode';
 import { PlaylistCoverModal } from './components/PlaylistCoverModal';
+import { WelcomeTourModal } from './components/WelcomeTourModal';
 import { TiltedCard, ShinyText, GradientText } from './components/reactbits';
 import {
   Play16Icon,
@@ -1039,6 +1040,9 @@ const SpotifyShell: React.FC = () => {
           />
         );
       })()}
+
+      {/* First-Time Welcome Tour Modal */}
+      <WelcomeTourModal />
 
       {/* Toast Notification */}
       {toastMessage && (

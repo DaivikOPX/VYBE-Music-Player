@@ -278,6 +278,9 @@ interface PlayerContextType {
   designingCoverPlaylistId: string | null;
   openCoverDesigner: (playlistId: string) => void;
   closeCoverDesigner: () => void;
+  isWelcomeOpen: boolean;
+  openWelcomeTour: () => void;
+  completeWelcomeTour: () => void;
   toggleTrackExplicit: (trackId: string) => void;
   renameTrackFile: (trackId: string, newTitle: string) => Promise<boolean>;
   updateTrackLyrics: (trackId: string, lyrics: LyricLine[], offsetSec?: number) => void;
@@ -447,6 +450,18 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [isTheaterMode, setIsTheaterMode] = useState(false);
   const [isMobilePlayerOpen, setIsMobilePlayerOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isWelcomeOpen, setIsWelcomeOpen] = useState(false);
+  const [hasCompletedWelcome, setHasCompletedWelcome] = useState(false);
+  const openWelcomeTour = useCallback(() => setIsWelcomeOpen(true), []);
+  const completeWelcomeTour = useCallback(() => {
+    setHasCompletedWelcome(true);
+    setIsWelcomeOpen(false);
+    try {
+      localStorage.setItem('vybe_welcome_completed_v1', 'true');
+    } catch {
+      // ignore
+    }
+  }, []);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const toastTimerRef = useRef<number | null>(null);
 
@@ -985,6 +1000,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     lastPositionSec: currentTimeRef.current,
     settings,
     profile,
+    hasCompletedWelcome,
     cachedTracks: window.electronAPI
       ? tracks.filter(t => t.audioUrl && !t.audioUrl.startsWith('blob:'))
       : undefined
@@ -1010,6 +1026,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     currentTrack?.id,
     settings,
     profile,
+    hasCompletedWelcome,
     tracks
   ]);
 
@@ -1109,6 +1126,20 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (initialTracks.length > 0) {
           applyRestoredTrackAndQueue(initialTracks, saved, mergedSettings);
         }
+      }
+
+      const seenWelcome =
+        Boolean(saved?.hasCompletedWelcome) ||
+        (() => {
+          try {
+            return localStorage.getItem('vybe_welcome_completed_v1') === 'true';
+          } catch {
+            return false;
+          }
+        })();
+      setHasCompletedWelcome(seenWelcome);
+      if (!seenWelcome) {
+        setIsWelcomeOpen(true);
       }
 
       hydratedRef.current = true;
@@ -3348,6 +3379,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         designingCoverPlaylistId,
         openCoverDesigner,
         closeCoverDesigner,
+        isWelcomeOpen,
+        openWelcomeTour,
+        completeWelcomeTour,
         checkMissingFiles,
         removeMissingTracks,
         addCustomSmartRule,

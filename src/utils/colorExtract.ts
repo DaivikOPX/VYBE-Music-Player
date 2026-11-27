@@ -132,7 +132,24 @@ export function extractAccentPalette(imageUrl: string): Promise<AccentPalette> {
   if (!imageUrl) return Promise.resolve(DEFAULT_ACCENT_PALETTE);
   if (paletteCache.has(imageUrl)) return Promise.resolve(paletteCache.get(imageUrl)!);
 
-  return new Promise(resolve => {
+  return new Promise(async resolve => {
+    let sourceUrl = imageUrl;
+    let isCreatedBlob = false;
+
+    // For external or local-art images, fetch as blob to guarantee clean CORS-free canvas extraction
+    if (imageUrl.startsWith('http://') || imageUrl.startsWith('https://') || imageUrl.startsWith('local-art://')) {
+      try {
+        const res = await fetch(imageUrl);
+        if (res.ok) {
+          const blob = await res.blob();
+          sourceUrl = URL.createObjectURL(blob);
+          isCreatedBlob = true;
+        }
+      } catch {
+        // Fallback to direct URL if fetch blocked
+      }
+    }
+
     const img = new Image();
     img.crossOrigin = 'anonymous';
     img.onload = () => {
@@ -141,9 +158,13 @@ export function extractAccentPalette(imageUrl: string): Promise<AccentPalette> {
         canvas.width = 24;
         canvas.height = 24;
         const ctx = canvas.getContext('2d');
-        if (!ctx) return resolve(DEFAULT_ACCENT_PALETTE);
+        if (!ctx) {
+          if (isCreatedBlob) URL.revokeObjectURL(sourceUrl);
+          return resolve(DEFAULT_ACCENT_PALETTE);
+        }
         ctx.drawImage(img, 0, 0, 24, 24);
         const { data } = ctx.getImageData(0, 0, 24, 24);
+        if (isCreatedBlob) URL.revokeObjectURL(sourceUrl);
 
         let rSum = 0;
         let gSum = 0;
@@ -201,11 +222,15 @@ export function extractAccentPalette(imageUrl: string): Promise<AccentPalette> {
         paletteCache.set(imageUrl, palette);
         resolve(palette);
       } catch {
+        if (isCreatedBlob) URL.revokeObjectURL(sourceUrl);
         resolve(DEFAULT_ACCENT_PALETTE);
       }
     };
-    img.onerror = () => resolve(DEFAULT_ACCENT_PALETTE);
-    img.src = imageUrl;
+    img.onerror = () => {
+      if (isCreatedBlob) URL.revokeObjectURL(sourceUrl);
+      resolve(DEFAULT_ACCENT_PALETTE);
+    };
+    img.src = sourceUrl;
   });
 }
 
@@ -219,4 +244,26 @@ export function extractDominantColor(imageUrl: string): Promise<string> {
     if (!colorCache.has(imageUrl)) colorCache.set(imageUrl, p.moodHex);
     return p.moodHex;
   });
+}
+
+const SPOTIFY_PALETTES = [
+  '#c2410c', // Warm Golden Amber (Matches Bharat / Chashni Bollywood artwork)
+  '#4338ca', // Deep Indigo
+  '#047857', // Emerald Teal
+  '#be185d', // Deep Rose
+  '#7c3aed', // Royal Violet
+  '#0284c7', // Sky Blue
+  '#d97706', // Rich Ochre
+  '#b91c1c', // Crimson Ruby
+];
+
+export function getSpotifyTrackFallback(title = '', artist = ''): string {
+  const seed = `${title}:${artist}`;
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) {
+    hash = (hash << 5) - hash + seed.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % SPOTIFY_PALETTES.length;
+  return SPOTIFY_PALETTES[idx];
 }

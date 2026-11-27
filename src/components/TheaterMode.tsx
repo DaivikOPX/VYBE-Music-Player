@@ -842,24 +842,28 @@ export const TheaterMode: React.FC = () => {
 
               let lineShadow = '0 0 0px transparent, 0 0 0px transparent';
               let lineTransform = 'scale(0.96)';
-              let lineOpacity = 0.25;
-              let lineBlur = 'blur(0.75px)';
+              let lineOpacity = 0.28;
+              let lineBlur = 'blur(0.6px)';
+              let lineFontWeight = 700;
 
               if (isActive) {
                 lineShadow = `0 0 35px rgba(255, 255, 255, 0.8), 0 0 70px ${currentTrack.accentColor || '#1ed760'}bb`;
-                lineTransform = 'scale(1.06)';
+                lineTransform = 'scale(1.05)';
                 lineOpacity = 1;
                 lineBlur = 'blur(0px)';
+                lineFontWeight = 900;
               } else if (isUpcoming) {
-                lineShadow = `0 0 15px rgba(255, 255, 255, 0.4), 0 0 30px ${currentTrack.accentColor || '#1ed760'}55`;
+                lineShadow = `0 0 15px rgba(255, 255, 255, 0.35), 0 0 30px ${currentTrack.accentColor || '#1ed760'}55`;
                 lineTransform = 'scale(1.01)';
                 lineOpacity = 0.65;
-                lineBlur = 'blur(0.15px)';
+                lineBlur = 'blur(0.2px)';
+                lineFontWeight = 800;
               } else if (isPast) {
                 lineShadow = '0 0 0px transparent, 0 0 0px transparent';
                 lineTransform = 'scale(0.98)';
-                lineOpacity = 0.38;
-                lineBlur = 'blur(0.4px)';
+                lineOpacity = 0.40;
+                lineBlur = 'blur(0.35px)';
+                lineFontWeight = 700;
               }
 
               return (
@@ -871,15 +875,18 @@ export const TheaterMode: React.FC = () => {
                   }}
                   style={{
                     transformOrigin: 'center center',
-                    willChange: 'transform, opacity, filter',
+                    fontFamily: 'var(--font-lyrics)',
+                    fontWeight: lineFontWeight,
+                    letterSpacing: '-0.02em',
+                    willChange: 'transform, opacity, filter, text-shadow',
                     transform: lineTransform,
                     opacity: lineOpacity,
                     filter: lineBlur,
                     textShadow: lineShadow,
                     transition:
-                      'transform 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 550ms cubic-bezier(0.16, 1, 0.3, 1), filter 550ms ease, text-shadow 550ms ease',
+                      'transform 550ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 450ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 450ms ease, text-shadow 450ms ease, color 450ms ease',
                   }}
-                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold leading-[1.35] select-none text-white ${
+                  className={`text-2xl sm:text-3xl md:text-5xl leading-[1.38] select-none text-white ${
                     lineIsSynced ? 'cursor-pointer hover:opacity-90' : ''
                   }`}
                 >

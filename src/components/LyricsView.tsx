@@ -16,6 +16,7 @@ import {
 import { usePlayer } from '../context/PlayerContext';
 import { FluidAurora, ShinyText } from './reactbits';
 import { parseLrcText } from '../utils/lrcParser';
+import { extractAccentPalette, getSpotifyTrackFallback } from '../utils/colorExtract';
 
 export const LyricsView: React.FC = () => {
   const {
@@ -37,6 +38,7 @@ export const LyricsView: React.FC = () => {
   const [lyricsDraft, setLyricsDraft] = useState('');
   const [optionsMenuOpen, setOptionsMenuOpen] = useState(false);
   const [userIsScrolling, setUserIsScrolling] = useState(false);
+  const [coverAccent, setCoverAccent] = useState<string | null>(null);
 
   const lrcFileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -99,45 +101,74 @@ export const LyricsView: React.FC = () => {
     }, 4000);
   }, []);
 
+  // Extract cover art accent directly for instantaneous Spotify background tinting
+  useEffect(() => {
+    let isSubscribed = true;
+    if (currentTrack?.coverUrl) {
+      extractAccentPalette(currentTrack.coverUrl)
+        .then(palette => {
+          if (isSubscribed && palette && palette.accentHex && palette.accentHex !== '#1ed760') {
+            setCoverAccent(palette.accentHex);
+          }
+        })
+        .catch(() => {});
+    } else {
+      setCoverAccent(null);
+    }
+    return () => {
+      isSubscribed = false;
+    };
+  }, [currentTrack?.coverUrl]);
+
   // Reset user scroll lock when track changes
   useEffect(() => {
     setUserIsScrolling(false);
   }, [currentTrack?.id]);
 
-  // AUTO-SCROLL AS THE SONG PLAYS!
+  // BUTTERY AUTO-SCROLL TO ACTIVE LYRIC AT 40% VIEWPORT HEIGHT
   useEffect(() => {
     if (!userIsScrolling && activeLyricIdx >= 0) {
       const lineEl = lineRefs.current[activeLyricIdx];
-      if (lineEl) {
-        lineEl.scrollIntoView({
-          behavior: 'smooth',
-          block: 'center',
-          inline: 'nearest'
+      const container = scrollContainerRef.current;
+      if (lineEl && container) {
+        const containerHeight = container.clientHeight;
+        const lineOffsetTop = lineEl.offsetTop;
+        const lineHeight = lineEl.clientHeight;
+        const targetScrollTop = lineOffsetTop - containerHeight * 0.40 + lineHeight / 2;
+        container.scrollTo({
+          top: Math.max(0, targetScrollTop),
+          behavior: 'smooth'
         });
       }
     }
   }, [activeLyricIdx, userIsScrolling]);
 
-  // Primary accent color derived from track artwork or active accent
-  const rawAccent = (currentTrack?.accentColor && currentTrack.accentColor !== '#282828')
-    ? currentTrack.accentColor
-    : (activeAccentColor && activeAccentColor !== '#282828')
-    ? activeAccentColor
-    : '#1ed760';
+  // Primary accent color derived from track artwork or deterministic Spotify palette
+  const rawAccent = useMemo(() => {
+    if (coverAccent && coverAccent !== '#282828' && coverAccent !== '#000000') {
+      return coverAccent;
+    }
+    if (currentTrack?.accentColor && currentTrack.accentColor !== '#282828' && currentTrack.accentColor !== '#000000') {
+      return currentTrack.accentColor;
+    }
+    if (activeAccentColor && activeAccentColor !== '#282828' && activeAccentColor !== '#000000') {
+      return activeAccentColor;
+    }
+    return getSpotifyTrackFallback(currentTrack?.title || '', currentTrack?.artist || '');
+  }, [coverAccent, currentTrack?.accentColor, currentTrack?.title, currentTrack?.artist, activeAccentColor]);
 
   // Dynamic Spotify-style rich colored background matching track album artwork
   const lyricsBackground = useMemo(() => {
-    if (settings.amoledMode) return '#000000';
-    return `linear-gradient(180deg, ${rawAccent}e6 0%, ${rawAccent}77 38%, #0d0d12 100%)`;
-  }, [settings.amoledMode, rawAccent]);
+    return `radial-gradient(ellipse at 50% 12%, ${rawAccent}e6 0%, ${rawAccent}88 35%, #13131c 78%, #08080c 100%)`;
+  }, [rawAccent]);
 
   // Harmonic color palette for FluidAurora liquid mesh
   const auroraStops = useMemo<[string, string, string, string]>(() => {
     return [
       rawAccent,
-      `${rawAccent}bb`,
-      '#6366f1', // Indigo harmonic
-      '#0a0a0f'  // Deep backdrop
+      `${rawAccent}cc`,
+      '#4f46e5', // Deep indigo harmonic
+      '#08080c'  // Deep backdrop
     ];
   }, [rawAccent]);
 
@@ -162,8 +193,8 @@ export const LyricsView: React.FC = () => {
       }}
     >
       {/* 1. ReactBits Fluid Liquid Aurora Background with track harmony */}
-      {!settings.amoledMode && settings.animationsEnabled !== false && (
-        <FluidAurora colorStops={auroraStops} opacity={0.55} />
+      {settings.animationsEnabled !== false && (
+        <FluidAurora colorStops={auroraStops} opacity={0.65} />
       )}
 
       {/* Hidden file input for loading .lrc/.txt */}
@@ -431,7 +462,7 @@ export const LyricsView: React.FC = () => {
         ref={scrollContainerRef}
         onWheel={handleUserScroll}
         onTouchMove={handleUserScroll}
-        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar scroll-smooth"
+        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar"
       >
         <div className="max-w-3xl mx-auto">
           {hasLyrics ? (
@@ -449,25 +480,29 @@ export const LyricsView: React.FC = () => {
                   line.time - effectiveLyricsTime <= 1.5;
 
                 let lineShadow = '0 0 0px transparent, 0 0 0px transparent';
-                let lineTransform = 'translate3d(0, 0, 0) scale(0.96)';
-                let lineOpacity = 0.25;
-                let lineBlur = 'blur(0.75px)';
+                let lineTransform = 'scale(0.96)';
+                let lineOpacity = 0.28;
+                let lineBlur = 'blur(0.6px)';
+                let lineFontWeight = 700;
 
                 if (isActive) {
-                  lineShadow = `0 0 32px rgba(255, 255, 255, 0.75), 0 0 65px ${rawAccent}bb`;
-                  lineTransform = 'translate3d(12px, 0, 0) scale(1.05)';
+                  lineShadow = `0 0 32px rgba(255, 255, 255, 0.8), 0 0 60px ${rawAccent}99`;
+                  lineTransform = 'scale(1.04)';
                   lineOpacity = 1;
                   lineBlur = 'blur(0px)';
+                  lineFontWeight = 900;
                 } else if (isUpcoming) {
-                  lineShadow = `0 0 14px rgba(255, 255, 255, 0.4), 0 0 28px ${rawAccent}55`;
-                  lineTransform = 'translate3d(4px, 0, 0) scale(1.01)';
+                  lineShadow = `0 0 14px rgba(255, 255, 255, 0.35), 0 0 28px ${rawAccent}44`;
+                  lineTransform = 'scale(1.01)';
                   lineOpacity = 0.65;
-                  lineBlur = 'blur(0.15px)';
+                  lineBlur = 'blur(0.2px)';
+                  lineFontWeight = 800;
                 } else if (isPast) {
                   lineShadow = '0 0 0px transparent, 0 0 0px transparent';
-                  lineTransform = 'translate3d(0, 0, 0) scale(0.98)';
-                  lineOpacity = 0.38;
-                  lineBlur = 'blur(0.4px)';
+                  lineTransform = 'scale(0.98)';
+                  lineOpacity = 0.40;
+                  lineBlur = 'blur(0.35px)';
+                  lineFontWeight = 700;
                 }
 
                 return (
@@ -482,15 +517,18 @@ export const LyricsView: React.FC = () => {
                     }}
                     style={{
                       transformOrigin: 'left center',
-                      willChange: 'transform, opacity, filter',
+                      fontFamily: 'var(--font-lyrics)',
+                      fontWeight: lineFontWeight,
+                      letterSpacing: '-0.02em',
+                      willChange: 'transform, opacity, filter, text-shadow',
                       transform: lineTransform,
                       opacity: lineOpacity,
                       filter: lineBlur,
                       textShadow: lineShadow,
                       transition:
-                        'transform 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 550ms cubic-bezier(0.16, 1, 0.3, 1), filter 550ms ease, text-shadow 550ms ease',
+                        'transform 550ms cubic-bezier(0.2, 0.9, 0.2, 1), opacity 450ms cubic-bezier(0.2, 0.9, 0.2, 1), filter 450ms ease, text-shadow 450ms ease, color 450ms ease',
                     }}
-                    className={`select-none text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight leading-[1.35] text-white ${
+                    className={`select-none text-2xl sm:text-3xl md:text-5xl leading-[1.38] text-white ${
                       lineIsSynced ? 'cursor-pointer hover:opacity-90' : ''
                     }`}
                   >

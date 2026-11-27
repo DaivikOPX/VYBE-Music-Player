@@ -24,7 +24,7 @@ import { Track } from '../types';
 import { VirtualizedTrackList } from './VirtualizedTrackList';
 import { BatchMetadataForm } from './BatchMetadataForm';
 import { PlaylistCoverModal } from './PlaylistCoverModal';
-import { TiltedCard, BlurText, ShinyText, ClickSpark } from './reactbits';
+import { TiltedCard, BlurText, ShinyText } from './reactbits';
 import {
   PlayTriangleIcon,
   Pause16Icon,
@@ -378,20 +378,18 @@ export const PlaylistView: React.FC<PlaylistViewProps> = ({ playlistId }) => {
       >
         <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
           <div className="flex items-center gap-4">
-            <ClickSpark>
-              <button
-                onClick={() => playPlaylist(playlist.id)}
-                disabled={playlistTracks.length === 0}
-                title={isThisPlaying ? 'Pause' : 'Play'}
-                className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer disabled:cursor-not-allowed"
-              >
-                {isThisPlaying ? (
-                  <Pause16Icon size={22} className="text-black" />
-                ) : (
-                  <PlayTriangleIcon size={24} className="text-black ml-0.5" />
-                )}
-              </button>
-            </ClickSpark>
+            <button
+              onClick={() => playPlaylist(playlist.id)}
+              disabled={playlistTracks.length === 0}
+              title={isThisPlaying ? 'Pause' : 'Play'}
+              className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 disabled:hover:scale-100 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer disabled:cursor-not-allowed"
+            >
+              {isThisPlaying ? (
+                <Pause16Icon size={22} className="text-black" />
+              ) : (
+                <PlayTriangleIcon size={24} className="text-black ml-0.5" />
+              )}
+            </button>
 
             <button
               onClick={toggleShuffle}

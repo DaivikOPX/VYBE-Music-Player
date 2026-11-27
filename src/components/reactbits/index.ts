@@ -6,7 +6,5 @@ export { FluidAurora } from './FluidAurora';
 export { BlurText } from './BlurText';
 export { ShinyText } from './ShinyText';
 export { CountUp } from './CountUp';
-export { ClickSpark } from './ClickSpark';
 export { GradientText } from './GradientText';
 export { StarBorder } from './StarBorder';
-export { Magnet } from './Magnet';

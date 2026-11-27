@@ -24,7 +24,7 @@ import {
   RepeatIcon,
   SpotifyLogoIcon,
 } from './SpotifyIcons';
-import { TiltedCard, BlurText, ShinyText, ClickSpark, Aurora } from './reactbits';
+import { TiltedCard, BlurText, ShinyText, Aurora } from './reactbits';
 
 const formatTime = (sec: number) => {
   if (!Number.isFinite(sec) || sec < 0) return '0:00';
@@ -77,19 +77,22 @@ export const TheaterMode: React.FC = () => {
   const theaterLineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
   const theaterScrollRafRef = useRef<number | null>(null);
 
-  // Active synced lyric index
+  // Active synced lyric index (clean O(N) lookup)
   const activeLyricIdx = (() => {
     if (viewMode !== 'lyrics' || !currentTrack?.lyrics?.length) return -1;
     const lyrics = currentTrack.lyrics;
     const offset = currentTrack.lyricsOffsetSec || 0;
     const effectiveTime = currentTime + offset;
+    let active = -1;
+    let maxTime = -1;
     for (let i = 0; i < lyrics.length; i++) {
-      const line = lyrics[i];
-      if (line.time < 0) continue;
-      const nextSynced = lyrics.slice(i + 1).find(l => l.time >= 0)?.time ?? Infinity;
-      if (effectiveTime >= line.time && effectiveTime < nextSynced) return i;
+      const t = lyrics[i].time;
+      if (t >= 0 && t <= effectiveTime && t >= maxTime) {
+        active = i;
+        maxTime = t;
+      }
     }
-    return -1;
+    return active;
   })();
 
   // Physics-based smooth scroll active lyric in theater mode
@@ -123,6 +126,13 @@ export const TheaterMode: React.FC = () => {
       }
     };
     theaterScrollRafRef.current = requestAnimationFrame(step);
+
+    return () => {
+      if (theaterScrollRafRef.current) {
+        cancelAnimationFrame(theaterScrollRafRef.current);
+        theaterScrollRafRef.current = null;
+      }
+    };
   }, [viewMode, activeLyricIdx, currentTrack?.id]);
 
   // Bass-Reactive Audio Spring Bump (reads Web Audio sub-bass frequencies 0-4)
@@ -593,24 +603,22 @@ export const TheaterMode: React.FC = () => {
                 <SkipBackIcon size={26} />
               </button>
 
-              <ClickSpark sparkColor={accentHex}>
-                <button
-                  onClick={togglePlay}
-                  title={isPlaying ? 'Pause' : 'Play'}
-                  style={{
-                    boxShadow: isPlaying
-                      ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
-                      : '0 10px 30px rgba(0,0,0,0.6)',
-                  }}
-                  className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
-                >
-                  {isPlaying ? (
-                    <Pause16Icon size={26} />
-                  ) : (
-                    <Play16Icon size={26} className="ml-1" />
-                  )}
-                </button>
-              </ClickSpark>
+              <button
+                onClick={togglePlay}
+                title={isPlaying ? 'Pause' : 'Play'}
+                style={{
+                  boxShadow: isPlaying
+                    ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
+                    : '0 10px 30px rgba(0,0,0,0.6)',
+                }}
+                className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
+              >
+                {isPlaying ? (
+                  <Pause16Icon size={26} />
+                ) : (
+                  <Play16Icon size={26} className="ml-1" />
+                )}
+              </button>
 
               <button
                 onClick={nextTrack}
@@ -745,24 +753,22 @@ export const TheaterMode: React.FC = () => {
                 <SkipBackIcon size={26} />
               </button>
 
-              <ClickSpark sparkColor={accentHex}>
-                <button
-                  onClick={togglePlay}
-                  title={isPlaying ? 'Pause' : 'Play'}
-                  style={{
-                    boxShadow: isPlaying
-                      ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
-                      : '0 10px 30px rgba(0,0,0,0.6)',
-                  }}
-                  className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
-                >
-                  {isPlaying ? (
-                    <Pause16Icon size={26} />
-                  ) : (
-                    <Play16Icon size={26} className="ml-1" />
-                  )}
-                </button>
-              </ClickSpark>
+              <button
+                onClick={togglePlay}
+                title={isPlaying ? 'Pause' : 'Play'}
+                style={{
+                  boxShadow: isPlaying
+                    ? `0 0 35px ${accentHex}99, 0 10px 30px rgba(0,0,0,0.6)`
+                    : '0 10px 30px rgba(0,0,0,0.6)',
+                }}
+                className="w-16 h-16 rounded-full bg-white text-black hover:scale-110 active:scale-95 transition-all duration-200 flex items-center justify-center cursor-pointer shadow-2xl"
+              >
+                {isPlaying ? (
+                  <Pause16Icon size={26} />
+                ) : (
+                  <Play16Icon size={26} className="ml-1" />
+                )}
+              </button>
 
               <button
                 onClick={nextTrack}
@@ -844,26 +850,22 @@ export const TheaterMode: React.FC = () => {
               let lineTransform = 'scale(0.96)';
               let lineOpacity = 0.28;
               let lineBlur = 'blur(0.6px)';
-              let lineFontWeight = 700;
 
               if (isActive) {
                 lineShadow = `0 0 35px rgba(255, 255, 255, 0.8), 0 0 70px ${currentTrack.accentColor || '#1ed760'}bb`;
                 lineTransform = 'scale(1.05)';
                 lineOpacity = 1;
                 lineBlur = 'blur(0px)';
-                lineFontWeight = 900;
               } else if (isUpcoming) {
                 lineShadow = `0 0 15px rgba(255, 255, 255, 0.35), 0 0 30px ${currentTrack.accentColor || '#1ed760'}55`;
                 lineTransform = 'scale(1.01)';
                 lineOpacity = 0.65;
                 lineBlur = 'blur(0.2px)';
-                lineFontWeight = 800;
               } else if (isPast) {
                 lineShadow = '0 0 0px transparent, 0 0 0px transparent';
                 lineTransform = 'scale(0.98)';
                 lineOpacity = 0.40;
                 lineBlur = 'blur(0.35px)';
-                lineFontWeight = 700;
               }
 
               return (
@@ -876,7 +878,7 @@ export const TheaterMode: React.FC = () => {
                   style={{
                     transformOrigin: 'center center',
                     fontFamily: 'var(--font-lyrics)',
-                    fontWeight: lineFontWeight,
+                    fontWeight: 800,
                     letterSpacing: '-0.02em',
                     willChange: 'transform, opacity, filter, text-shadow',
                     transform: lineTransform,

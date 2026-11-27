@@ -409,7 +409,7 @@ function collectAudioFilesRecursive(dirPath, acc = [], seen = new Set(), depth =
     return acc;
   }
   for (const entry of entries) {
-    if (acc.length >= 2500) break;
+    if (acc.length >= 25000) break;
     const full = path.resolve(dirPath, entry.name);
     if (entry.isDirectory()) {
       collectAudioFilesRecursive(full, acc, seen, depth + 1);

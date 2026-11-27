@@ -78,19 +78,10 @@ export const LyricsView: React.FC = () => {
     return active;
   }, [currentTrack?.lyrics, effectiveLyricsTime]);
 
-  // Center active lyric into view
+  // Center active lyric into view cleanly using the 60fps spring-damped rAF loop
   const scrollToActiveLine = useCallback(() => {
-    if (activeLyricIdx < 0) return;
-    const lineEl = lineRefs.current[activeLyricIdx];
-    if (lineEl) {
-      lineEl.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-        inline: 'nearest'
-      });
-      setUserIsScrolling(false);
-    }
-  }, [activeLyricIdx]);
+    setUserIsScrolling(false);
+  }, []);
 
   // Handle user manual scroll interaction: pause auto-scroll gracefully
   const handleUserScroll = useCallback(() => {
@@ -492,26 +483,22 @@ export const LyricsView: React.FC = () => {
                 let lineTransform = 'scale(0.96)';
                 let lineOpacity = 0.28;
                 let lineBlur = 'blur(0.6px)';
-                let lineFontWeight = 700;
 
                 if (isActive) {
                   lineShadow = `0 0 32px rgba(255, 255, 255, 0.8), 0 0 60px ${rawAccent}99`;
                   lineTransform = 'scale(1.04)';
                   lineOpacity = 1;
                   lineBlur = 'blur(0px)';
-                  lineFontWeight = 900;
                 } else if (isUpcoming) {
                   lineShadow = `0 0 14px rgba(255, 255, 255, 0.35), 0 0 28px ${rawAccent}44`;
                   lineTransform = 'scale(1.01)';
                   lineOpacity = 0.65;
                   lineBlur = 'blur(0.2px)';
-                  lineFontWeight = 800;
                 } else if (isPast) {
                   lineShadow = '0 0 0px transparent, 0 0 0px transparent';
                   lineTransform = 'scale(0.98)';
                   lineOpacity = 0.40;
                   lineBlur = 'blur(0.35px)';
-                  lineFontWeight = 700;
                 }
 
                 return (
@@ -527,7 +514,7 @@ export const LyricsView: React.FC = () => {
                     style={{
                       transformOrigin: 'left center',
                       fontFamily: 'var(--font-lyrics)',
-                      fontWeight: lineFontWeight,
+                      fontWeight: 800,
                       letterSpacing: '-0.02em',
                       willChange: 'transform, opacity, filter, text-shadow',
                       transform: lineTransform,

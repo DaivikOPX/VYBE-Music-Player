@@ -6,7 +6,7 @@ import { TrackRow } from './TrackRow';
 import { BatchMetadataForm } from './BatchMetadataForm';
 import { CoverArtModal } from './CoverArtModal';
 import { PlayTriangleIcon, Pause16Icon, ShuffleIcon } from './SpotifyIcons';
-import { TiltedCard, BlurText, ShinyText, ClickSpark } from './reactbits';
+import { TiltedCard, BlurText, ShinyText } from './reactbits';
 
 interface AlbumViewProps {
   albumName: string;
@@ -166,20 +166,18 @@ export const AlbumView: React.FC<AlbumViewProps> = ({ albumName, artistName }) =
         }}
       >
         <div className="flex items-center gap-5 mb-6">
-          <ClickSpark>
-            <button
-              onClick={handlePlayAlbum}
-              disabled={albumTracks.length === 0}
-              title={isAlbumPlaying ? 'Pause' : 'Play'}
-              className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer"
-            >
-              {isAlbumPlaying ? (
-                <Pause16Icon size={22} className="text-black" />
-              ) : (
-                <PlayTriangleIcon size={24} className="text-black ml-0.5" />
-              )}
-            </button>
-          </ClickSpark>
+          <button
+            onClick={handlePlayAlbum}
+            disabled={albumTracks.length === 0}
+            title={isAlbumPlaying ? 'Pause' : 'Play'}
+            className="w-13 h-13 md:w-14 md:h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer"
+          >
+            {isAlbumPlaying ? (
+              <Pause16Icon size={22} className="text-black" />
+            ) : (
+              <PlayTriangleIcon size={24} className="text-black ml-0.5" />
+            )}
+          </button>
 
           <button
             onClick={handleShuffleAlbum}

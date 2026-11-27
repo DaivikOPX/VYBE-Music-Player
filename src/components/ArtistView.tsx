@@ -4,7 +4,7 @@ import { usePlayer } from '../context/PlayerContext';
 import { Track } from '../types';
 import { TrackRow } from './TrackRow';
 import { PlayTriangleIcon, Pause16Icon, VerifiedBadgeIcon } from './SpotifyIcons';
-import { TiltedCard, SpotlightCard, BlurText, ShinyText, ClickSpark } from './reactbits';
+import { TiltedCard, SpotlightCard, BlurText, ShinyText } from './reactbits';
 
 interface ArtistViewProps {
   artistId: string;
@@ -149,20 +149,18 @@ export const ArtistView: React.FC<ArtistViewProps> = ({ artistId }) => {
         }}
       >
         <div className="flex items-center gap-6 mb-8">
-          <ClickSpark>
-            <button
-              onClick={handlePlayTop}
-              disabled={artistTracks.length === 0}
-              className="w-14 h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer"
-              title={isPlayingArtist ? 'Pause' : 'Play'}
-            >
-              {isPlayingArtist ? (
-                <Pause16Icon size={24} className="text-black" />
-              ) : (
-                <PlayTriangleIcon size={26} className="text-black ml-0.5" />
-              )}
-            </button>
-          </ClickSpark>
+          <button
+            onClick={handlePlayTop}
+            disabled={artistTracks.length === 0}
+            className="w-14 h-14 rounded-full bg-spotify-green hover:bg-spotify-green-hover hover:scale-105 disabled:opacity-40 text-black flex items-center justify-center shadow-xl transition-all cursor-pointer"
+            title={isPlayingArtist ? 'Pause' : 'Play'}
+          >
+            {isPlayingArtist ? (
+              <Pause16Icon size={24} className="text-black" />
+            ) : (
+              <PlayTriangleIcon size={26} className="text-black ml-0.5" />
+            )}
+          </button>
 
           <button
             onClick={() => toggleFollowArtist(artist.id)}

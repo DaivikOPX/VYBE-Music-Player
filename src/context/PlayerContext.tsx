@@ -417,6 +417,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const isScrubbingRef = useRef(false);
   const pendingSeekRef = useRef<number | null>(null);
   const playSessionRef = useRef(0);
+  const lyricsFetchTokenRef = useRef(0);
   const hydratedRef = useRef(false);
   const currentTimeRef = useRef(0);
   currentTimeRef.current = currentTime;
@@ -1709,6 +1710,22 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
   }, [showToast, recordTrackPlay]);
 
+  // High-resolution 80ms currentTime sync while playing so karaoke lyrics hit dead-on beat
+  useEffect(() => {
+    if (!isPlaying) return;
+    const id = window.setInterval(() => {
+      if (isScrubbingRef.current) return;
+      const audio = getActiveAudio();
+      if (audio && !audio.paused) {
+        const t = audio.currentTime;
+        if (Math.abs(t - currentTimeRef.current) >= 0.04) {
+          setCurrentTime(t);
+        }
+      }
+    }, 80);
+    return () => window.clearInterval(id);
+  }, [isPlaying, getActiveAudio]);
+
   // Sleep Timer countdown interval
   useEffect(() => {
     if (!sleepTimer || sleepTimer.kind !== 'until') {
@@ -2098,6 +2115,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       if (!track || (settingsRef.current.lyricsSource === 'local' && !force)) {
         return false;
       }
+      const token = ++lyricsFetchTokenRef.current;
       if (force) {
         clearLyricsCacheForTrack(track.id);
         lyricsFetchAttemptedRef.current.delete(track.id);
@@ -2106,6 +2124,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       setLyricsStatusText(null);
       try {
         const res = await fetchOnlineLyrics(track, force);
+        if (token !== lyricsFetchTokenRef.current) return false;
         if (res && res.lines.length > 0) {
           updateTrackLyrics(track.id, res.lines, track.lyricsOffsetSec || 0);
           setLyricsStatusText(res.sourceLabel);
@@ -2115,7 +2134,9 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (force) showToast('No matching lyrics found on LRCLIB');
         return false;
       } finally {
-        setIsFetchingLyrics(false);
+        if (token === lyricsFetchTokenRef.current) {
+          setIsFetchingLyrics(false);
+        }
       }
     },
     [updateTrackLyrics, showToast]

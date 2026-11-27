@@ -3,7 +3,6 @@ import { ChevronUp, Check, Laptop, Music, Sliders, Timer, Maximize2 } from 'luci
 import { usePlayer } from '../context/PlayerContext';
 import { CONNECT_DEVICES } from '../data/mockData';
 import { AudioToolsPopover } from './AudioToolsPopover';
-import { ClickSpark } from './reactbits';
 import {
   ShuffleIcon,
   SkipBackIcon,
@@ -325,17 +324,15 @@ export const PlayerBar: React.FC = () => {
                 </div>
               </div>
 
-              <ClickSpark>
-                <button
-                  onClick={() => toggleLikeTrack(currentTrack.id)}
-                  title={isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
-                  className={`p-1.5 transition-transform hover:scale-105 shrink-0 cursor-pointer ${
-                    isLiked ? 'text-spotify-green' : 'text-spotify-muted hover:text-white'
-                  }`}
-                >
-                  {isLiked ? <CheckCircleIcon size={16} /> : <PlusCircleIcon size={16} />}
-                </button>
-              </ClickSpark>
+              <button
+                onClick={() => toggleLikeTrack(currentTrack.id)}
+                title={isLiked ? 'Remove from Liked Songs' : 'Add to Liked Songs'}
+                className={`p-1.5 transition-transform hover:scale-105 shrink-0 cursor-pointer ${
+                  isLiked ? 'text-spotify-green' : 'text-spotify-muted hover:text-white'
+                }`}
+              >
+                {isLiked ? <CheckCircleIcon size={16} /> : <PlusCircleIcon size={16} />}
+              </button>
             </>
           ) : (
             <div className="w-14" />
@@ -369,17 +366,15 @@ export const PlayerBar: React.FC = () => {
               <SkipBackIcon size={16} />
             </button>
 
-            <ClickSpark>
-              <button
-                data-testid="control-button-playpause"
-                onClick={togglePlay}
-                disabled={!hasTrack}
-                title={isPlaying ? 'Pause' : 'Play'}
-                className="w-8 h-8 rounded-full bg-white hover:scale-106 active:scale-96 disabled:opacity-40 disabled:hover:scale-100 text-black flex items-center justify-center transition-transform cursor-pointer disabled:cursor-not-allowed shadow"
-              >
-                {isPlaying ? <Pause16Icon size={16} /> : <Play16Icon size={16} className="ml-0.5" />}
-              </button>
-            </ClickSpark>
+            <button
+              data-testid="control-button-playpause"
+              onClick={togglePlay}
+              disabled={!hasTrack}
+              title={isPlaying ? 'Pause' : 'Play'}
+              className="w-8 h-8 rounded-full bg-white hover:scale-106 active:scale-96 disabled:opacity-40 disabled:hover:scale-100 text-black flex items-center justify-center transition-transform cursor-pointer disabled:cursor-not-allowed shadow"
+            >
+              {isPlaying ? <Pause16Icon size={16} /> : <Play16Icon size={16} className="ml-0.5" />}
+            </button>
 
             <button
               data-testid="control-button-skip-forward"

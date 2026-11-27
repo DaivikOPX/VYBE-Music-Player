@@ -415,6 +415,8 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const pendingSeekRef = useRef<number | null>(null);
   const playSessionRef = useRef(0);
   const hydratedRef = useRef(false);
+  const currentTimeRef = useRef(0);
+  currentTimeRef.current = currentTime;
 
   tracksRef.current = tracks;
   playlistsRef.current = playlists;
@@ -958,16 +960,162 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [showToast]);
 
-  // Hydrate persisted state + watched folders / IndexedDB audio files on startup
+  // Helper to construct serializable state snapshot (reads currentTimeRef so playback ticks never cancel saves)
+  const buildPersistedState = useCallback((): PersistedAppState => ({
+    version: 1,
+    watchedFolders,
+    playlists,
+    folders,
+    likedTrackIds,
+    followedArtistIds,
+    savedAlbumIds,
+    playCounts,
+    lastPlayedMap,
+    recentlyPlayedIds,
+    queueTrackIds: queue.map(q => q.id),
+    searchHistory,
+    listeningStats,
+    smartRules,
+    customTracksMeta,
+    volume,
+    isMuted,
+    isShuffle,
+    repeatMode,
+    lastTrackId: currentTrack?.id || null,
+    lastPositionSec: currentTimeRef.current,
+    settings,
+    profile,
+    cachedTracks: window.electronAPI
+      ? tracks.filter(t => t.audioUrl && !t.audioUrl.startsWith('blob:'))
+      : undefined
+  }), [
+    watchedFolders,
+    playlists,
+    folders,
+    likedTrackIds,
+    followedArtistIds,
+    savedAlbumIds,
+    playCounts,
+    lastPlayedMap,
+    recentlyPlayedIds,
+    queue,
+    searchHistory,
+    listeningStats,
+    smartRules,
+    customTracksMeta,
+    volume,
+    isMuted,
+    isShuffle,
+    repeatMode,
+    currentTrack?.id,
+    settings,
+    profile,
+    tracks
+  ]);
+
+  const buildPersistedStateRef = useRef(buildPersistedState);
+  buildPersistedStateRef.current = buildPersistedState;
+
+  // Hydrate persisted state IMMEDIATELY on startup, then sync watched folders in background
   useEffect(() => {
     let cancelled = false;
     (async () => {
       const saved = await loadPersistedState();
       if (cancelled) return;
 
+      const applyRestoredTrackAndQueue = (availableTracks: Track[], savedState: PersistedAppState, mergedSettings: AudioSettings) => {
+        if (savedState.queueTrackIds?.length && availableTracks.length > 0) {
+          const restoredQueue = savedState.queueTrackIds
+            .map(id => availableTracks.find(t => t.id === id))
+            .filter((t): t is Track => Boolean(t));
+          if (restoredQueue.length > 0) setQueue(restoredQueue);
+        }
+
+        if (savedState.lastTrackId && mergedSettings.resumeOnStartup !== false && availableTracks.length > 0) {
+          const found = availableTracks.find(t => t.id === savedState.lastTrackId);
+          if (found) {
+            setCurrentTrack(found);
+            setContextTracks(availableTracks);
+            setDuration(found.duration || 0);
+            setCurrentTime(savedState.lastPositionSec || 0);
+            const audio = getActiveAudio();
+            if (audio) {
+              if (
+                found.audioUrl.startsWith('http://') ||
+                found.audioUrl.startsWith('https://') ||
+                found.audioUrl.startsWith('local-audio://')
+              ) {
+                audio.crossOrigin = 'anonymous';
+              } else {
+                audio.removeAttribute('crossorigin');
+              }
+              audio.src = found.audioUrl;
+              audio.volume = savedState.isMuted ? 0 : savedState.volume ?? 0.8;
+              pendingSeekRef.current = savedState.lastPositionSec || 0;
+            }
+          }
+        }
+      };
+
+      let initialTracks: Track[] = [];
+      let mergedSettings = DEFAULT_SETTINGS;
+
+      // 1. INSTANT HYDRATION (< 10ms): Apply settings, profile, playlists, stats & cached tracks right away!
+      if (saved) {
+        if (saved.watchedFolders?.length) setWatchedFolders(saved.watchedFolders);
+        if (saved.folders?.length) setFolders(saved.folders);
+        setLikedTrackIds(saved.likedTrackIds || []);
+        setFollowedArtistIds(saved.followedArtistIds || []);
+        if (saved.savedAlbumIds) setSavedAlbumIds(saved.savedAlbumIds);
+        setPlayCounts(saved.playCounts || {});
+        if (saved.lastPlayedMap) setLastPlayedMap(saved.lastPlayedMap);
+        setRecentlyPlayedIds(saved.recentlyPlayedIds || []);
+        if (saved.searchHistory) setSearchHistory(saved.searchHistory);
+        if (saved.listeningStats) setListeningStats(saved.listeningStats);
+        if (saved.smartRules) setSmartRules(saved.smartRules);
+        if (saved.customTracksMeta) setCustomTracksMeta(saved.customTracksMeta);
+
+        setVolumeState(saved.volume ?? 0.8);
+        setIsMuted(Boolean(saved.isMuted));
+        setIsShuffle(Boolean(saved.isShuffle));
+        setRepeatMode(saved.repeatMode || 'off');
+        mergedSettings = { ...DEFAULT_SETTINGS, ...(saved.settings || {}) };
+        setSettings(mergedSettings);
+        if (saved.profile) setProfile({ ...DEFAULT_PROFILE, ...saved.profile });
+
+        if (window.electronAPI && saved.cachedTracks?.length) {
+          const metaMap = saved.customTracksMeta || {};
+          initialTracks = saved.cachedTracks.map(t => (metaMap[t.id] ? { ...t, ...metaMap[t.id] } : t));
+          await addLocalTracksToLibrary(initialTracks, true);
+        }
+
+        if (saved.playlists?.length) {
+          setPlaylists(prev => {
+            const localPl = prev.find(p => p.isLocalFiles);
+            const merged = [...saved.playlists];
+            if (localPl && !merged.some(p => p.isLocalFiles)) {
+              merged.splice(1, 0, localPl);
+            } else if (localPl) {
+              const idx = merged.findIndex(p => p.isLocalFiles);
+              merged[idx] = {
+                ...merged[idx],
+                trackIds: Array.from(new Set([...merged[idx].trackIds, ...localPl.trackIds]))
+              };
+            }
+            return merged;
+          });
+        }
+
+        if (initialTracks.length > 0) {
+          applyRestoredTrackAndQueue(initialTracks, saved, mergedSettings);
+        }
+      }
+
+      hydratedRef.current = true;
+
+      // 2. NON-BLOCKING BACKGROUND SYNC: Scan watched folders / IndexedDB for any new/updated files
       let restoredTracks: Track[] = [];
       if (window.electronAPI && saved?.watchedFolders?.length) {
-        setWatchedFolders(saved.watchedFolders);
         const items = await window.electronAPI.scanWatchedFolders(saved.watchedFolders);
         if (!cancelled && items.length > 0) {
           restoredTracks = await mapNativeItemsToTracks(items);
@@ -987,7 +1135,6 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
               if (perm === 'granted') {
                 const dirFiles = await collectFilesFromWebDirectoryHandle(entry.handle);
                 if (dirFiles.length > 0 && !cancelled) {
-                  // Hydrate via importBrowserAudioFiles after state settles
                   window.setTimeout(() => importBrowserAudioFiles(dirFiles), 150);
                 }
               }
@@ -1004,137 +1151,52 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const metaMap = saved?.customTracksMeta || {};
         restoredTracks = restoredTracks.map(t => (metaMap[t.id] ? { ...t, ...metaMap[t.id] } : t));
         await addLocalTracksToLibrary(restoredTracks, true);
-      }
 
-      if (saved) {
-        if (saved.playlists?.length) {
-          setPlaylists(prev => {
-            const localPl = prev.find(p => p.isLocalFiles);
-            const merged = [...saved.playlists];
-            if (localPl && !merged.some(p => p.isLocalFiles)) {
-              merged.splice(1, 0, localPl);
-            } else if (localPl) {
-              const idx = merged.findIndex(p => p.isLocalFiles);
-              merged[idx] = {
-                ...merged[idx],
-                trackIds: Array.from(new Set([...merged[idx].trackIds, ...localPl.trackIds]))
-              };
-            }
-            return merged;
-          });
-        }
-        if (saved.folders?.length) setFolders(saved.folders);
-        setLikedTrackIds(saved.likedTrackIds || []);
-        setFollowedArtistIds(saved.followedArtistIds || []);
-        if (saved.savedAlbumIds) setSavedAlbumIds(saved.savedAlbumIds);
-        setPlayCounts(saved.playCounts || {});
-        if (saved.lastPlayedMap) setLastPlayedMap(saved.lastPlayedMap);
-        setRecentlyPlayedIds(saved.recentlyPlayedIds || []);
-        if (saved.searchHistory) setSearchHistory(saved.searchHistory);
-        if (saved.listeningStats) setListeningStats(saved.listeningStats);
-        if (saved.smartRules) setSmartRules(saved.smartRules);
-        if (saved.customTracksMeta) setCustomTracksMeta(saved.customTracksMeta);
-        if (saved.queueTrackIds?.length && restoredTracks.length > 0) {
-          const restoredQueue = saved.queueTrackIds
-            .map(id => restoredTracks.find(t => t.id === id))
-            .filter((t): t is Track => Boolean(t));
-          if (restoredQueue.length > 0) setQueue(restoredQueue);
-        }
-        setVolumeState(saved.volume ?? 0.8);
-        setIsMuted(Boolean(saved.isMuted));
-        setIsShuffle(Boolean(saved.isShuffle));
-        setRepeatMode(saved.repeatMode || 'off');
-        const mergedSettings = { ...DEFAULT_SETTINGS, ...(saved.settings || {}) };
-        setSettings(mergedSettings);
-        if (saved.profile) setProfile({ ...DEFAULT_PROFILE, ...saved.profile });
-
-        if (saved.lastTrackId && mergedSettings.resumeOnStartup !== false) {
-          const found = restoredTracks.find(t => t.id === saved.lastTrackId);
-          if (found) {
-            setCurrentTrack(found);
-            setContextTracks(restoredTracks);
-            setDuration(found.duration || 0);
-            setCurrentTime(saved.lastPositionSec || 0);
-            const audio = getActiveAudio();
-            if (audio) {
-              if (
-                found.audioUrl.startsWith('http://') ||
-                found.audioUrl.startsWith('https://') ||
-                found.audioUrl.startsWith('local-audio://')
-              ) {
-                audio.crossOrigin = 'anonymous';
-              } else {
-                audio.removeAttribute('crossorigin');
-              }
-              audio.src = found.audioUrl;
-              audio.volume = saved.isMuted ? 0 : saved.volume ?? 0.8;
-              pendingSeekRef.current = saved.lastPositionSec || 0;
-            }
-          }
+        if (saved && initialTracks.length === 0) {
+          applyRestoredTrackAndQueue(restoredTracks, saved, mergedSettings);
         }
       }
-      hydratedRef.current = true;
     })();
     return () => {
       cancelled = true;
     };
   }, [addLocalTracksToLibrary, mapNativeItemsToTracks, getActiveAudio]);
 
-  // Debounced persistence save
+  // Fast debounced persistence save (never cancelled by playback currentTime ticks!)
   useEffect(() => {
     if (!hydratedRef.current) return;
     const t = window.setTimeout(() => {
-      void savePersistedState({
-        version: 1,
-        watchedFolders,
-        playlists,
-        folders,
-        likedTrackIds,
-        followedArtistIds,
-        savedAlbumIds,
-        playCounts,
-        lastPlayedMap,
-        recentlyPlayedIds,
-        queueTrackIds: queue.map(q => q.id),
-        searchHistory,
-        listeningStats,
-        smartRules,
-        customTracksMeta,
-        volume,
-        isMuted,
-        isShuffle,
-        repeatMode,
-        lastTrackId: currentTrack?.id || null,
-        lastPositionSec: currentTime,
-        settings,
-        profile
-      });
-    }, 600);
+      void savePersistedState(buildPersistedStateRef.current());
+    }, 150);
     return () => window.clearTimeout(t);
-  }, [
-    watchedFolders,
-    playlists,
-    folders,
-    likedTrackIds,
-    followedArtistIds,
-    savedAlbumIds,
-    playCounts,
-    lastPlayedMap,
-    recentlyPlayedIds,
-    queue,
-    searchHistory,
-    listeningStats,
-    smartRules,
-    customTracksMeta,
-    volume,
-    isMuted,
-    isShuffle,
-    repeatMode,
-    currentTrack,
-    currentTime,
-    settings,
-    profile
-  ]);
+  }, [buildPersistedState]);
+
+  // Periodic playback position save every 3s while playing, plus immediate flush on pause
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (!isPlaying) {
+      void savePersistedState(buildPersistedStateRef.current());
+      return;
+    }
+    const id = window.setInterval(() => {
+      void savePersistedState(buildPersistedStateRef.current());
+    }, 3000);
+    return () => window.clearInterval(id);
+  }, [isPlaying]);
+
+  // Immediate flush on window refresh / close so zero state is ever lost
+  useEffect(() => {
+    const flushState = () => {
+      if (!hydratedRef.current) return;
+      void savePersistedState(buildPersistedStateRef.current());
+    };
+    window.addEventListener('beforeunload', flushState);
+    window.addEventListener('pagehide', flushState);
+    return () => {
+      window.removeEventListener('beforeunload', flushState);
+      window.removeEventListener('pagehide', flushState);
+    };
+  }, []);
 
   const navigate = useCallback((nextRoute: ViewRoute) => {
     setNavState(prev => {

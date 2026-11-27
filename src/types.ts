@@ -195,6 +195,7 @@ export interface PersistedAppState {
   lastPositionSec: number;
   settings: AudioSettings;
   profile?: UserProfile;
+  cachedTracks?: Track[];
 }
 
 export interface NativeAudioItem {

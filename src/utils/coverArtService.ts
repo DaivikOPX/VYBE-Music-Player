@@ -63,29 +63,42 @@ export function isGenericAlbum(album?: string): boolean {
   if (!a) return true;
   if (/^\d+$/.test(a)) return true;
 
-  return (
-    a === 'local files' ||
-    a === 'unknown album' ||
-    a === 'unknown' ||
-    a === 'music' ||
-    a === 'download' ||
-    a === 'downloads' ||
-    a === 'audio' ||
-    a === 'songs' ||
-    a === 'new folder' ||
-    a === 'desktop' ||
-    a === 'documents' ||
-    a === 'temp' ||
-    a === 'my music' ||
-    a === 'music library' ||
-    a === 'album' ||
-    a === 'various' ||
-    a === 'singles' ||
-    a === 'tracks' ||
-    a === 'files' ||
-    a === 'mp3' ||
-    a === 'media'
-  );
+  const genericWords = new Set([
+    'local files',
+    'unknown album',
+    'unknown',
+    'music',
+    'download',
+    'downloads',
+    'audio',
+    'songs',
+    'new folder',
+    'desktop',
+    'documents',
+    'temp',
+    'my music',
+    'music library',
+    'album',
+    'various',
+    'singles',
+    'tracks',
+    'files',
+    'mp3',
+    'media'
+  ]);
+
+  if (genericWords.has(a)) return true;
+
+  // Folder names often contain patterns like songs_backup, music_2024, my_downloads, etc.
+  if (
+    /(?:^|[_\s.-])(?:backup|downloads?|songs?|musics?|audios?|folders?|files?|tracks?|media|rip|desktop|documents?|temp|new|old|copy|misc|all)(?:$|[_\s.-])/i.test(
+      a
+    )
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -266,6 +279,7 @@ function scoreCandidate(
     trackTitle?: string;
     trackName?: string;
     collectionName?: string;
+    primaryGenreName?: string;
   }
 ): number {
   const candArtist = candidate.artistName || '';
@@ -295,6 +309,18 @@ function scoreCandidate(
         break;
       }
     }
+  }
+
+  // Slight preference for studio releases/singles over film/movie soundtracks when available
+  let soundtrackAdjustment = 0;
+  const isSoundtrack =
+    candidate.primaryGenreName === 'Soundtrack' ||
+    /soundtrack|motion picture|original score|film score/i.test(candAlbum);
+  const queryExplicitlyWantsSoundtrack = /soundtrack|ost|motion picture|score/i.test(
+    `${query.title} ${query.album}`
+  );
+  if (isSoundtrack && !queryExplicitlyWantsSoundtrack) {
+    soundtrackAdjustment = -8;
   }
 
   let titleScore = 0;
@@ -341,7 +367,7 @@ function scoreCandidate(
     albumScore = 5;
   }
 
-  const rawScore = titleScore + artistScore + albumScore - junkPenalty;
+  const rawScore = titleScore + artistScore + albumScore - junkPenalty + soundtrackAdjustment;
   return Math.max(0, Math.min(100, Math.round(rawScore)));
 }
 
@@ -388,7 +414,7 @@ export async function searchOnlineCoverArt(params: {
 
       const score = scoreCandidate(
         { artist: cleanArtist, album: cleanAlbum, title: cleanTitle },
-        { artistName, albumName, trackTitle }
+        { artistName, albumName, trackTitle, primaryGenreName: match.primaryGenreName }
       );
 
       // Only accept candidates meeting minimum reasonable relevance (score >= 35)

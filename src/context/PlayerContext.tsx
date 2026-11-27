@@ -2042,18 +2042,21 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       }
       coverFetchAttemptedRef.current.add(track.id);
 
-      // 1. If running in Electron desktop, check adjacent folder for cover.jpg / folder.jpg / etc.
+      // 1. If running in Electron desktop, check adjacent folder for cover.jpg / folder.jpg / etc. (if track lacks cover)
       if (
         window.electronAPI?.findLocalCover &&
         track.sourceKey &&
         !track.sourceKey.startsWith('blob:') &&
-        !track.sourceKey.startsWith('http')
+        !track.sourceKey.startsWith('http') &&
+        !track.coverUrl
       ) {
         try {
           const localCover = await window.electronAPI.findLocalCover(track.sourceKey);
           if (localCover) {
             updateTrackMetadata([track.id], { coverUrl: localCover });
-            return localCover;
+            if (!isGenericArtist(track.artist) && !isGenericAlbum(track.album)) {
+              return localCover;
+            }
           }
         } catch {
           // ignore
@@ -2069,7 +2072,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         });
         if (match) {
           const patch: Partial<Pick<Track, 'title' | 'artist' | 'album' | 'genre' | 'year' | 'trackNumber' | 'coverUrl'>> = {};
-          if (match.coverUrl) {
+          if (match.coverUrl && !track.coverUrl) {
             patch.coverUrl = match.coverUrl;
           }
           if (isGenericArtist(track.artist) && match.artistName) {
@@ -2093,7 +2096,7 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           if (Object.keys(patch).length > 0) {
             updateTrackMetadata([track.id], patch, true);
           }
-          return match.coverUrl || null;
+          return match.coverUrl || track.coverUrl || null;
         }
       } catch (err) {
         console.warn('Cover art and metadata fetch error for track:', track.title, err);
@@ -2103,42 +2106,50 @@ export const PlayerProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     [updateTrackMetadata]
   );
 
-  // Auto-fetch missing cover art for the currently playing track immediately
+  // Helper: checks if a track is missing cover art, artist name, or album name
+  const trackNeedsEnrichment = useCallback((t?: Track | null): boolean => {
+    if (!t) return false;
+    return !t.coverUrl || isGenericArtist(t.artist) || isGenericAlbum(t.album);
+  }, []);
+
+  // Auto-fetch missing cover art and metadata for the currently playing track immediately
   useEffect(() => {
     if (!currentTrack) return;
-    if (currentTrack.coverUrl) return;
+    if (!trackNeedsEnrichment(currentTrack)) return;
     if (coverFetchAttemptedRef.current.has(currentTrack.id)) return;
-    void fetchCoverForTrack(currentTrack, false);
-  }, [currentTrack?.id, currentTrack?.coverUrl, fetchCoverForTrack]);
+    void fetchCoverForTrack(currentTrack, true);
+  }, [currentTrack?.id, currentTrack?.coverUrl, currentTrack?.artist, currentTrack?.album, fetchCoverForTrack, trackNeedsEnrichment]);
 
-  // Gentle background worker that auto-pulls missing covers across the library
+  // Gentle background worker that auto-pulls missing covers & metadata across the library
   useEffect(() => {
     let cancelled = false;
-    const missing = tracks.filter(t => !t.coverUrl && !coverFetchAttemptedRef.current.has(t.id));
-    if (missing.length === 0) return;
+    const pendingEnrichment = tracks.filter(
+      t => trackNeedsEnrichment(t) && !coverFetchAttemptedRef.current.has(t.id)
+    );
+    if (pendingEnrichment.length === 0) return;
 
     const timer = setTimeout(async () => {
       // Process in batches of 2 with spacing
-      for (let i = 0; i < missing.length; i += 2) {
+      for (let i = 0; i < pendingEnrichment.length; i += 2) {
         if (cancelled) break;
-        const slice = missing.slice(i, i + 2);
+        const slice = pendingEnrichment.slice(i, i + 2);
         await Promise.allSettled(slice.map(t => fetchCoverForTrack(t, false)));
         await new Promise(r => setTimeout(r, 200));
       }
-    }, 1500);
+    }, 1200);
 
     return () => {
       cancelled = true;
       clearTimeout(timer);
     };
-  }, [tracks, fetchCoverForTrack]);
+  }, [tracks, fetchCoverForTrack, trackNeedsEnrichment]);
 
   // Batch cover fetcher triggered on-demand with live progress callback
   const fetchMissingCoversBatch = useCallback(
     async (
       onProgress?: (done: number, total: number, found: number) => void
     ): Promise<{ found: number; total: number }> => {
-      const missing = tracksRef.current.filter(t => !t.coverUrl);
+      const missing = tracksRef.current.filter(t => trackNeedsEnrichment(t));
       if (missing.length === 0) {
         showToast('All tracks already have album artwork loaded!');
         return { found: 0, total: 0 };

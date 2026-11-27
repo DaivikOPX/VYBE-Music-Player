@@ -235,7 +235,10 @@ async function parseAudioFileMeta(filePath) {
 
   const parentDir = path.basename(path.dirname(normalizedPath)) || 'Local Files';
   const genericFolders = new Set(['downloads', 'download', 'music', 'songs', 'audio', 'desktop', 'documents', 'new folder', 'temp', 'local files', 'unknown', 'unknown album', 'tracks', 'files', 'mp3', 'media']);
-  let album = genericFolders.has(parentDir.toLowerCase().trim()) || /^\d+$/.test(parentDir.trim()) ? 'Local Files' : parentDir;
+  const isGenericFolder = genericFolders.has(parentDir.toLowerCase().trim()) ||
+    /^\d+$/.test(parentDir.trim()) ||
+    /(?:^|[_\s.-])(?:backup|downloads?|songs?|musics?|audios?|folders?|files?|tracks?|media|rip|desktop|documents?|temp|new|old|copy|misc|all)(?:$|[_\s.-])/i.test(parentDir);
+  let album = isGenericFolder ? 'Local Files' : parentDir;
   let trackNumber;
   let year;
   let genre;

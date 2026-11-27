@@ -289,10 +289,11 @@ export const WelcomeTourModal: React.FC = () => {
       ref={containerRef}
       onTouchStart={handleTouchStart}
       onTouchEnd={handleTouchEnd}
-      className="fixed inset-0 z-[100] w-screen h-screen flex flex-col justify-between select-none overflow-hidden"
+      className="fixed inset-0 z-[9999] w-screen h-screen bg-[#050508] flex flex-col justify-between select-none overflow-hidden"
       style={{
-        background: `radial-gradient(circle at 45% 30%, ${currentSlide.accent}30 0%, #060609 82%)`,
-        transition: 'background 850ms cubic-bezier(0.16, 1, 0.3, 1)'
+        backgroundColor: '#050508',
+        backgroundImage: `radial-gradient(circle at 45% 30%, ${currentSlide.accent}30 0%, #060609 82%)`,
+        transition: 'background-image 850ms cubic-bezier(0.16, 1, 0.3, 1)'
       }}
     >
       {/* Immersive Theater-Mode Animated Aurora Backdrop */}

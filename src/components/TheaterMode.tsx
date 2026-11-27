@@ -832,6 +832,35 @@ export const TheaterMode: React.FC = () => {
               const isPast = activeLyricIdx >= 0 && idx < activeLyricIdx;
               const lineIsSynced = line.time >= 0;
               const offset = currentTrack.lyricsOffsetSec || 0;
+              const effTime = currentTime + offset;
+              const isUpcoming =
+                !isActive &&
+                !isPast &&
+                lineIsSynced &&
+                line.time > effTime &&
+                line.time - effTime <= 1.5;
+
+              let lineShadow = '0 0 0px transparent, 0 0 0px transparent';
+              let lineTransform = 'scale(0.96)';
+              let lineOpacity = 0.25;
+              let lineBlur = 'blur(0.75px)';
+
+              if (isActive) {
+                lineShadow = `0 0 35px rgba(255, 255, 255, 0.8), 0 0 70px ${currentTrack.accentColor || '#1ed760'}bb`;
+                lineTransform = 'scale(1.06)';
+                lineOpacity = 1;
+                lineBlur = 'blur(0px)';
+              } else if (isUpcoming) {
+                lineShadow = `0 0 15px rgba(255, 255, 255, 0.4), 0 0 30px ${currentTrack.accentColor || '#1ed760'}55`;
+                lineTransform = 'scale(1.01)';
+                lineOpacity = 0.65;
+                lineBlur = 'blur(0.15px)';
+              } else if (isPast) {
+                lineShadow = '0 0 0px transparent, 0 0 0px transparent';
+                lineTransform = 'scale(0.98)';
+                lineOpacity = 0.38;
+                lineBlur = 'blur(0.4px)';
+              }
 
               return (
                 <p
@@ -843,20 +872,15 @@ export const TheaterMode: React.FC = () => {
                   style={{
                     transformOrigin: 'center center',
                     willChange: 'transform, opacity, filter',
-                    textShadow: isActive && currentTrack.accentColor
-                      ? `0 0 35px ${currentTrack.accentColor}dd, 0 0 70px ${currentTrack.accentColor}55`
-                      : isActive
-                      ? '0 0 30px rgba(255, 255, 255, 0.65)'
-                      : 'none',
+                    transform: lineTransform,
+                    opacity: lineOpacity,
+                    filter: lineBlur,
+                    textShadow: lineShadow,
+                    transition:
+                      'transform 650ms cubic-bezier(0.16, 1, 0.3, 1), opacity 550ms cubic-bezier(0.16, 1, 0.3, 1), filter 550ms ease, text-shadow 550ms ease',
                   }}
-                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold leading-[1.35] transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] select-none ${
-                    lineIsSynced ? 'cursor-pointer hover:opacity-85' : ''
-                  } ${
-                    isActive
-                      ? 'text-white scale-[1.05] opacity-100 filter-none drop-shadow-[0_0_36px_rgba(255,255,255,0.7)]'
-                      : isPast
-                      ? 'text-white/40 scale-[0.98] opacity-40 blur-[0.4px] hover:blur-none hover:opacity-75'
-                      : 'text-white/25 scale-[0.96] opacity-25 blur-[0.7px] hover:blur-none hover:opacity-75'
+                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold leading-[1.35] select-none text-white ${
+                    lineIsSynced ? 'cursor-pointer hover:opacity-90' : ''
                   }`}
                 >
                   {line.text || '♪'}

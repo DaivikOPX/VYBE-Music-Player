@@ -19,31 +19,34 @@ export const FluidAurora: React.FC<FluidAuroraProps> = ({
 
   return (
     <div
-      className={`pointer-events-none absolute inset-0 overflow-hidden ${className}`}
-      style={{ opacity }}
+      className={`pointer-events-none absolute inset-0 overflow-hidden transform-gpu will-change-transform ${className}`}
+      style={{ opacity, contain: 'strict' }}
       aria-hidden="true"
     >
       {/* Orb 1 - Top Left Primary Anchor */}
       <div
-        className="absolute -top-[25%] -left-[20%] w-[90%] h-[95%] rounded-full blur-[110px] animate-rb-aurora-1"
+        className="absolute -top-[25%] -left-[20%] w-[90%] h-[95%] rounded-full blur-[64px] scale-110 animate-rb-aurora-1 will-change-transform"
         style={{
           background: `radial-gradient(circle at 40% 40%, ${c1} 0%, transparent 70%)`,
+          transform: 'translate3d(0, 0, 0)',
         }}
       />
 
       {/* Orb 2 - Top Right Harmonic Ambient */}
       <div
-        className="absolute -top-[15%] -right-[25%] w-[85%] h-[90%] rounded-full blur-[120px] animate-rb-aurora-2"
+        className="absolute -top-[15%] -right-[25%] w-[85%] h-[90%] rounded-full blur-[72px] scale-110 animate-rb-aurora-2 will-change-transform"
         style={{
           background: `radial-gradient(circle at 60% 30%, ${c2} 0%, ${c3} 45%, transparent 75%)`,
+          transform: 'translate3d(0, 0, 0)',
         }}
       />
 
       {/* Orb 3 - Center Bottom Liquid Drift */}
       <div
-        className="absolute bottom-[-20%] left-[15%] w-[80%] h-[85%] rounded-full blur-[130px] animate-rb-aurora-3"
+        className="absolute bottom-[-20%] left-[15%] w-[80%] h-[85%] rounded-full blur-[76px] scale-110 animate-rb-aurora-3 will-change-transform"
         style={{
           background: `radial-gradient(circle at 50% 60%, ${c3} 0%, ${c4} 50%, transparent 80%)`,
+          transform: 'translate3d(0, 0, 0)',
         }}
       />
 

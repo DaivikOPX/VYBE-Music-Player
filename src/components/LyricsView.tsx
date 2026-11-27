@@ -14,7 +14,7 @@ import {
   X
 } from 'lucide-react';
 import { usePlayer } from '../context/PlayerContext';
-import { FluidAurora, ClickSpark, ShinyText } from './reactbits';
+import { FluidAurora, ShinyText } from './reactbits';
 import { parseLrcText } from '../utils/lrcParser';
 
 export const LyricsView: React.FC = () => {
@@ -39,7 +39,8 @@ export const LyricsView: React.FC = () => {
 
   const lrcFileInputRef = useRef<HTMLInputElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
-  const activeLyricRef = useRef<HTMLParagraphElement>(null);
+  const lineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const animFrameRef = useRef<number | null>(null);
   const userScrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -59,46 +60,94 @@ export const LyricsView: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [optionsMenuOpen]);
 
-  // Find index of the currently singing line
+  // Clean, high-performance single-pass calculation of currently playing line
   const activeLyricIdx = useMemo(() => {
-    if (!currentTrack?.lyrics?.length) return -1;
-    const lyrics = currentTrack.lyrics;
+    const lyrics = currentTrack?.lyrics;
+    if (!lyrics || lyrics.length === 0) return -1;
+    let active = -1;
     for (let i = 0; i < lyrics.length; i++) {
-      const line = lyrics[i];
-      if (line.time < 0) continue;
-      const nextSynced = lyrics.slice(i + 1).find(l => l.time >= 0)?.time ?? Infinity;
-      if (effectiveLyricsTime >= line.time && effectiveLyricsTime < nextSynced) {
-        return i;
+      if (lyrics[i].time >= 0 && lyrics[i].time <= effectiveLyricsTime) {
+        active = i;
+      } else if (lyrics[i].time > effectiveLyricsTime) {
+        break;
       }
     }
-    return -1;
+    return active;
   }, [currentTrack?.lyrics, effectiveLyricsTime]);
+
+  // Custom buttery-smooth physics-based scrolling with cubic-bezier ease-out
+  const smoothScrollToY = useCallback((targetY: number, duration = 520) => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    const startY = container.scrollTop;
+    const distance = targetY - startY;
+    if (Math.abs(distance) < 1.5) return;
+
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+    }
+
+    const startTime = performance.now();
+    // Ease-out cubic curve: fast pickup with lush decel
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      container.scrollTop = startY + distance * easeOutCubic(progress);
+
+      if (progress < 1) {
+        animFrameRef.current = requestAnimationFrame(step);
+      } else {
+        animFrameRef.current = null;
+      }
+    };
+
+    animFrameRef.current = requestAnimationFrame(step);
+  }, []);
+
+  // Center active lyric at the optical sweet spot (~38% down container)
+  const scrollToActiveLine = useCallback(() => {
+    if (activeLyricIdx < 0) return;
+    const lineEl = lineRefs.current[activeLyricIdx];
+    const container = scrollContainerRef.current;
+    if (!lineEl || !container) return;
+
+    const targetY = Math.max(
+      0,
+      lineEl.offsetTop - (container.clientHeight * 0.38) + (lineEl.clientHeight / 2)
+    );
+    smoothScrollToY(targetY, 480);
+    setUserIsScrolling(false);
+  }, [activeLyricIdx, smoothScrollToY]);
 
   // Handle user manual scroll interaction: pause auto-scroll gracefully
   const handleUserScroll = useCallback(() => {
+    if (animFrameRef.current) {
+      cancelAnimationFrame(animFrameRef.current);
+      animFrameRef.current = null;
+    }
     setUserIsScrolling(true);
     if (userScrollTimeoutRef.current) clearTimeout(userScrollTimeoutRef.current);
     userScrollTimeoutRef.current = setTimeout(() => {
       setUserIsScrolling(false);
-    }, 3800);
+    }, 4500);
   }, []);
 
-  // Smooth auto-scroll active lyric into center focus
-  const scrollToActiveLine = useCallback(() => {
-    if (activeLyricRef.current) {
-      activeLyricRef.current.scrollIntoView({
-        behavior: 'smooth',
-        block: 'center',
-      });
-      setUserIsScrolling(false);
-    }
-  }, []);
-
+  // Auto-scroll when active line changes
   useEffect(() => {
     if (!userIsScrolling && activeLyricIdx >= 0) {
-      scrollToActiveLine();
+      const lineEl = lineRefs.current[activeLyricIdx];
+      const container = scrollContainerRef.current;
+      if (lineEl && container) {
+        const targetY = Math.max(
+          0,
+          lineEl.offsetTop - (container.clientHeight * 0.38) + (lineEl.clientHeight / 2)
+        );
+        smoothScrollToY(targetY, 520);
+      }
     }
-  }, [activeLyricIdx, userIsScrolling, scrollToActiveLine]);
+  }, [activeLyricIdx, userIsScrolling, smoothScrollToY]);
 
   // Harmonic color palette derived from track accent color for FluidAurora
   const auroraStops = useMemo<[string, string, string, string]>(() => {
@@ -399,57 +448,54 @@ export const LyricsView: React.FC = () => {
         </div>
       )}
 
-      {/* 4. Main Scrollable Lyrics Body Wrapped in ReactBits ClickSpark */}
+      {/* 4. Main Scrollable Lyrics Body with Zero-Reflow GPU Typography */}
       <div
         ref={scrollContainerRef}
         onWheel={handleUserScroll}
         onTouchMove={handleUserScroll}
-        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar scroll-smooth"
+        className="flex-1 overflow-y-auto px-6 md:px-16 py-8 relative z-10 custom-scrollbar"
       >
         <div className="max-w-3xl mx-auto">
           {hasLyrics ? (
-            <ClickSpark sparkColor={currentTrack?.accentColor || '#1ed760'} sparkCount={8} sparkRadius={22}>
-              <div className="space-y-6 md:space-y-8 pb-36 pt-6">
-                {currentTrack.lyrics!.map((line, i) => {
-                  const lineIsSynced = line.time >= 0;
-                  const isActive = i === activeLyricIdx;
-                  const distance = activeLyricIdx >= 0 ? Math.abs(activeLyricIdx - i) : 0;
+            <div className="space-y-7 md:space-y-8 pb-40 pt-6">
+              {currentTrack.lyrics!.map((line, i) => {
+                const lineIsSynced = line.time >= 0;
+                const isActive = i === activeLyricIdx;
+                const isPast = activeLyricIdx >= 0 && i < activeLyricIdx;
 
-                  // Progressive depth of field styling inspired by Apple Music Sing & ReactBits
-                  let typographyStyle = '';
-                  if (isActive) {
-                    typographyStyle =
-                      'text-white text-3xl sm:text-4xl md:text-5xl font-black scale-[1.03] origin-left drop-shadow-[0_4px_32px_rgba(255,255,255,0.45)]';
-                  } else if (distance === 1) {
-                    typographyStyle =
-                      'text-white/60 text-2xl sm:text-3xl font-extrabold hover:text-white hover:scale-[1.01] hover:blur-0 transition-all';
-                  } else if (distance === 2) {
-                    typographyStyle =
-                      'text-white/35 text-xl sm:text-2xl font-bold blur-[0.4px] hover:text-white/80 hover:blur-0 hover:scale-[1.01] transition-all';
-                  } else {
-                    typographyStyle =
-                      'text-white/20 text-lg sm:text-xl font-bold blur-[0.8px] hover:text-white/70 hover:blur-0 hover:scale-[1.01] transition-all';
-                  }
-
-                  return (
-                    <p
-                      key={`${line.time}-${i}`}
-                      ref={isActive ? activeLyricRef : undefined}
-                      onClick={() => {
-                        if (lineIsSynced) {
-                          seek(Math.max(0, line.time - lyricsOffset));
-                        }
-                      }}
-                      className={`transition-all duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] select-none leading-relaxed ${
-                        lineIsSynced ? 'cursor-pointer' : ''
-                      } ${typographyStyle}`}
-                    >
-                      {line.text || '♪'}
-                    </p>
-                  );
-                })}
-              </div>
-            </ClickSpark>
+                return (
+                  <p
+                    key={`${line.time}-${i}`}
+                    ref={el => { lineRefs.current[i] = el; }}
+                    onClick={() => {
+                      if (lineIsSynced) {
+                        seek(Math.max(0, line.time - lyricsOffset));
+                      }
+                    }}
+                    style={{
+                      transformOrigin: 'left center',
+                      willChange: 'transform, opacity, filter',
+                      textShadow: isActive && currentTrack.accentColor
+                        ? `0 0 28px ${currentTrack.accentColor}bb, 0 0 54px ${currentTrack.accentColor}33`
+                        : isActive
+                        ? '0 0 24px rgba(255, 255, 255, 0.45)'
+                        : 'none',
+                    }}
+                    className={`select-none text-2xl sm:text-3xl md:text-4xl font-extrabold leading-[1.38] transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] ${
+                      lineIsSynced ? 'cursor-pointer hover:opacity-85' : ''
+                    } ${
+                      isActive
+                        ? 'text-white scale-[1.04] opacity-100 translate-x-1.5 filter-none drop-shadow-[0_4px_24px_rgba(255,255,255,0.4)]'
+                        : isPast
+                        ? 'text-white/40 scale-[0.98] opacity-40 blur-[0.3px] hover:blur-none hover:opacity-75'
+                        : 'text-white/25 scale-[0.97] opacity-25 blur-[0.6px] hover:blur-none hover:opacity-75'
+                    }`}
+                  >
+                    {line.text || '♪'}
+                  </p>
+                );
+              })}
+            </div>
           ) : (
             /* Empty State */
             <div className="py-24 text-center text-white/80 space-y-6">

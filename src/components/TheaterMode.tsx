@@ -72,8 +72,10 @@ export const TheaterMode: React.FC = () => {
   const [bassScale, setBassScale] = useState(1);
   const bassBinsRef = useRef(new Uint8Array(32));
 
-  // Karaoke lyric ref
-  const activeLyricRef = useRef<HTMLParagraphElement>(null);
+  // Karaoke lyric refs
+  const theaterLyricsContainerRef = useRef<HTMLDivElement>(null);
+  const theaterLineRefs = useRef<(HTMLParagraphElement | null)[]>([]);
+  const theaterScrollRafRef = useRef<number | null>(null);
 
   // Active synced lyric index
   const activeLyricIdx = (() => {
@@ -90,10 +92,37 @@ export const TheaterMode: React.FC = () => {
     return -1;
   })();
 
+  // Physics-based smooth scroll active lyric in theater mode
   useEffect(() => {
-    if (viewMode === 'lyrics' && activeLyricIdx >= 0) {
-      activeLyricRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    }
+    if (viewMode !== 'lyrics' || activeLyricIdx < 0) return;
+    const container = theaterLyricsContainerRef.current;
+    const lineEl = theaterLineRefs.current[activeLyricIdx];
+    if (!container || !lineEl) return;
+
+    const targetY = Math.max(
+      0,
+      lineEl.offsetTop - (container.clientHeight / 2) + (lineEl.clientHeight / 2)
+    );
+    const startY = container.scrollTop;
+    const distance = targetY - startY;
+    if (Math.abs(distance) < 2) return;
+
+    if (theaterScrollRafRef.current) cancelAnimationFrame(theaterScrollRafRef.current);
+    const startTime = performance.now();
+    const duration = 520;
+    const easeOutCubic = (t: number) => 1 - Math.pow(1 - t, 3);
+
+    const step = (now: number) => {
+      const elapsed = now - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      container.scrollTop = startY + distance * easeOutCubic(progress);
+      if (progress < 1) {
+        theaterScrollRafRef.current = requestAnimationFrame(step);
+      } else {
+        theaterScrollRafRef.current = null;
+      }
+    };
+    theaterScrollRafRef.current = requestAnimationFrame(step);
   }, [viewMode, activeLyricIdx, currentTrack?.id]);
 
   // Bass-Reactive Audio Spring Bump (reads Web Audio sub-bass frequencies 0-4)
@@ -792,41 +821,43 @@ export const TheaterMode: React.FC = () => {
           </div>
         </div>
       ) : (
-        /* Synced Real-Time Lyrics View */
-        <div className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-7 text-center select-text no-scrollbar max-h-[60vh] scroll-smooth">
+        /* Synced Real-Time Lyrics View with Zero-Reflow GPU Typography */
+        <div
+          ref={theaterLyricsContainerRef}
+          className="max-w-4xl mx-auto w-full flex-1 my-auto overflow-y-auto px-6 py-8 relative z-10 space-y-8 text-center select-text no-scrollbar max-h-[60vh]"
+        >
           {currentTrack.lyrics && currentTrack.lyrics.length > 0 ? (
             currentTrack.lyrics.map((line, idx) => {
               const isActive = idx === activeLyricIdx;
-              const distance = activeLyricIdx >= 0 ? Math.abs(activeLyricIdx - idx) : 0;
+              const isPast = activeLyricIdx >= 0 && idx < activeLyricIdx;
               const lineIsSynced = line.time >= 0;
               const offset = currentTrack.lyricsOffsetSec || 0;
-
-              let depthClass = '';
-              if (isActive) {
-                depthClass = 'text-white scale-[1.04] opacity-100 drop-shadow-[0_0_36px_rgba(255,255,255,0.7)] font-black';
-              } else if (distance === 1) {
-                depthClass = 'text-white/60 blur-[0.3px] hover:blur-0 hover:text-white/80 scale-[1.01]';
-              } else if (distance === 2) {
-                depthClass = 'text-white/35 blur-[0.8px] hover:blur-0 hover:text-white/70 scale-100';
-              } else {
-                depthClass = 'text-white/20 blur-[1.2px] hover:blur-0 hover:text-white/50 scale-100';
-              }
 
               return (
                 <p
                   key={idx}
-                  ref={isActive ? activeLyricRef : null}
+                  ref={el => { theaterLineRefs.current[idx] = el; }}
                   onClick={() => {
                     if (lineIsSynced) seek(Math.max(0, line.time - offset));
                   }}
-                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold transition-all duration-300 ${
-                    lineIsSynced ? 'cursor-pointer' : ''
-                  } ${depthClass}`}
-                  style={
-                    isActive && currentTrack.accentColor
-                      ? { textShadow: `0 0 35px ${currentTrack.accentColor}dd` }
-                      : undefined
-                  }
+                  style={{
+                    transformOrigin: 'center center',
+                    willChange: 'transform, opacity, filter',
+                    textShadow: isActive && currentTrack.accentColor
+                      ? `0 0 35px ${currentTrack.accentColor}dd, 0 0 70px ${currentTrack.accentColor}55`
+                      : isActive
+                      ? '0 0 30px rgba(255, 255, 255, 0.65)'
+                      : 'none',
+                  }}
+                  className={`text-2xl sm:text-3xl md:text-5xl font-extrabold leading-[1.35] transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] select-none ${
+                    lineIsSynced ? 'cursor-pointer hover:opacity-85' : ''
+                  } ${
+                    isActive
+                      ? 'text-white scale-[1.05] opacity-100 filter-none drop-shadow-[0_0_36px_rgba(255,255,255,0.7)]'
+                      : isPast
+                      ? 'text-white/40 scale-[0.98] opacity-40 blur-[0.4px] hover:blur-none hover:opacity-75'
+                      : 'text-white/25 scale-[0.96] opacity-25 blur-[0.7px] hover:blur-none hover:opacity-75'
+                  }`}
                 >
                   {line.text || '♪'}
                 </p>

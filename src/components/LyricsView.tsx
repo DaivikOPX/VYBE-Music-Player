@@ -29,7 +29,8 @@ export const LyricsView: React.FC = () => {
     setIsTheaterMode,
     showToast,
     updateAudioSettings,
-    isPlaying
+    isPlaying,
+    activeAccentColor
   } = usePlayer();
 
   const [lyricsEditOpen, setLyricsEditOpen] = useState(false);
@@ -117,19 +118,28 @@ export const LyricsView: React.FC = () => {
     }
   }, [activeLyricIdx, userIsScrolling]);
 
-  // Harmonic color palette derived from track accent color for FluidAurora
-  const auroraStops = useMemo<[string, string, string, string]>(() => {
-    const base = currentTrack?.accentColor && currentTrack.accentColor !== '#282828'
-      ? currentTrack.accentColor
-      : '#1ed760';
+  // Primary accent color derived from track artwork or active accent
+  const rawAccent = (currentTrack?.accentColor && currentTrack.accentColor !== '#282828')
+    ? currentTrack.accentColor
+    : (activeAccentColor && activeAccentColor !== '#282828')
+    ? activeAccentColor
+    : '#1ed760';
 
+  // Dynamic Spotify-style rich colored background matching track album artwork
+  const lyricsBackground = useMemo(() => {
+    if (settings.amoledMode) return '#000000';
+    return `linear-gradient(180deg, ${rawAccent}e6 0%, ${rawAccent}77 38%, #0d0d12 100%)`;
+  }, [settings.amoledMode, rawAccent]);
+
+  // Harmonic color palette for FluidAurora liquid mesh
+  const auroraStops = useMemo<[string, string, string, string]>(() => {
     return [
-      base,
+      rawAccent,
+      `${rawAccent}bb`,
       '#6366f1', // Indigo harmonic
-      '#a855f7', // Violet harmonic
-      '#0f172a'  // Deep backdrop
+      '#0a0a0f'  // Deep backdrop
     ];
-  }, [currentTrack?.accentColor]);
+  }, [rawAccent]);
 
   if (!currentTrack) {
     return (
@@ -146,14 +156,14 @@ export const LyricsView: React.FC = () => {
 
   return (
     <div
-      className="h-full flex-1 relative overflow-hidden flex flex-col selection:bg-spotify-green selection:text-black"
+      className="h-full flex-1 relative overflow-hidden flex flex-col selection:bg-spotify-green selection:text-black transition-[background] duration-700 ease-out"
       style={{
-        background: settings.amoledMode ? '#000000' : '#121212',
+        background: lyricsBackground,
       }}
     >
-      {/* 1. ReactBits Fluid Liquid Aurora Background */}
+      {/* 1. ReactBits Fluid Liquid Aurora Background with track harmony */}
       {!settings.amoledMode && settings.animationsEnabled !== false && (
-        <FluidAurora colorStops={auroraStops} opacity={0.42} />
+        <FluidAurora colorStops={auroraStops} opacity={0.55} />
       )}
 
       {/* Hidden file input for loading .lrc/.txt */}
@@ -444,20 +454,20 @@ export const LyricsView: React.FC = () => {
                     style={{
                       transformOrigin: 'left center',
                       willChange: 'transform, opacity, filter',
-                      textShadow: isActive && currentTrack.accentColor
-                        ? `0 0 28px ${currentTrack.accentColor}bb, 0 0 54px ${currentTrack.accentColor}33`
+                      textShadow: isActive && rawAccent
+                        ? `0 0 35px ${rawAccent}dd, 0 0 70px ${rawAccent}55`
                         : isActive
-                        ? '0 0 24px rgba(255, 255, 255, 0.45)'
+                        ? '0 0 30px rgba(255, 255, 255, 0.65)'
                         : 'none',
                     }}
-                    className={`select-none text-2xl sm:text-3xl md:text-4xl font-extrabold leading-[1.38] transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] ${
+                    className={`select-none text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight leading-[1.35] transition-all duration-500 ease-[cubic-bezier(0.2,0,0,1)] ${
                       lineIsSynced ? 'cursor-pointer hover:opacity-85' : ''
                     } ${
                       isActive
-                        ? 'text-white scale-[1.04] opacity-100 translate-x-1.5 filter-none drop-shadow-[0_4px_24px_rgba(255,255,255,0.4)]'
+                        ? 'text-white scale-[1.05] opacity-100 translate-x-2 filter-none drop-shadow-[0_0_36px_rgba(255,255,255,0.7)]'
                         : isPast
-                        ? 'text-white/40 scale-[0.98] opacity-40 blur-[0.3px] hover:blur-none hover:opacity-75'
-                        : 'text-white/25 scale-[0.97] opacity-25 blur-[0.6px] hover:blur-none hover:opacity-75'
+                        ? 'text-white/40 scale-[0.98] opacity-40 blur-[0.4px] hover:blur-none hover:opacity-75'
+                        : 'text-white/25 scale-[0.96] opacity-25 blur-[0.7px] hover:blur-none hover:opacity-75'
                     }`}
                   >
                     {line.text || '♪'}

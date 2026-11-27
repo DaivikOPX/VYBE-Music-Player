@@ -12,6 +12,8 @@ import { AudioToolsPopover } from './components/AudioToolsPopover';
 import { TheaterMode } from './components/TheaterMode';
 import { PlaylistCoverModal } from './components/PlaylistCoverModal';
 import { WelcomeTourModal } from './components/WelcomeTourModal';
+import { SetupScreen } from './components/SetupScreen';
+import { UninstallScreen } from './components/UninstallScreen';
 import { TiltedCard, ShinyText, GradientText } from './components/reactbits';
 import {
   Play16Icon,
@@ -1090,6 +1092,29 @@ class AppErrorBoundary extends React.Component<
 }
 
 export function App() {
+  const modeParam =
+    typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('mode') : null;
+  const appMode =
+    modeParam === 'setup' || modeParam === 'uninstall'
+      ? modeParam
+      : window.electronAPI?.appMode;
+
+  if (appMode === 'setup') {
+    return (
+      <AppErrorBoundary>
+        <SetupScreen />
+      </AppErrorBoundary>
+    );
+  }
+
+  if (appMode === 'uninstall') {
+    return (
+      <AppErrorBoundary>
+        <UninstallScreen />
+      </AppErrorBoundary>
+    );
+  }
+
   return (
     <AppErrorBoundary>
       <PlayerProvider>

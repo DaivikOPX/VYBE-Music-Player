@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "node electron/dev-runner.mjs",
     "desktop": "node electron/dev-runner.mjs",
+    "desktop:setup": "node electron/dev-runner.mjs --setup",
+    "desktop:uninstall": "node electron/dev-runner.mjs --uninstall",
     "dev:web": "vite",
     "build": "tsc && vite build",
     "build:exe": "npm run build && electron-builder --win",
@@ -29,15 +31,11 @@
     "win": {
       "icon": "build/icon.ico",
       "target": [
-        "nsis"
+        "portable"
       ]
     },
-    "nsis": {
-      "oneClick": true,
-      "perMachine": false,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "VYBE"
+    "portable": {
+      "requestExecutionLevel": "user"
     },
     "fileAssociations": [
       {

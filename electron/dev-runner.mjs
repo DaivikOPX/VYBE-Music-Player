@@ -15,7 +15,8 @@ async function start() {
     const devUrl = `http://localhost:${port}`;
     console.log(`[VYBE Dev] Vite dev server ready at ${devUrl}`);
 
-    const electronProcess = spawn(electron, ['.'], {
+    const extraArgs = process.argv.slice(2);
+    const electronProcess = spawn(electron, ['.', ...extraArgs], {
       stdio: 'inherit',
       env: {
         ...process.env,

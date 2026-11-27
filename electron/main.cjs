@@ -8,6 +8,13 @@ const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
 const zlib = require('zlib');
+const { registerInstallerIPC } = require('./installerEngine.cjs');
+
+const APP_MODE = process.argv.includes('--uninstall')
+  ? 'uninstall'
+  : (process.argv.includes('--setup') || Boolean(process.env.PORTABLE_EXECUTABLE_FILE))
+    ? 'setup'
+    : 'player';
 
 // Prevent unhandled main-process exceptions from crashing the desktop app
 process.on('uncaughtException', (err) => {
@@ -467,20 +474,22 @@ function registerGlobalMediaShortcuts(enabled) {
   }
 }
 
-const gotSingleInstanceLock = app.requestSingleInstanceLock();
-if (!gotSingleInstanceLock) {
-  app.quit();
-} else {
-  pendingLaunchFiles = extractAudioArgs(process.argv);
-  app.on('second-instance', (_event, argv) => {
-    if (mainWindow) {
-      if (mainWindow.isMinimized()) mainWindow.restore();
-      mainWindow.show();
-      mainWindow.focus();
-    }
-    const files = extractAudioArgs(argv);
-    if (files.length > 0) void dispatchOpenFiles(files);
-  });
+if (APP_MODE === 'player') {
+  const gotSingleInstanceLock = app.requestSingleInstanceLock();
+  if (!gotSingleInstanceLock) {
+    app.quit();
+  } else {
+    pendingLaunchFiles = extractAudioArgs(process.argv);
+    app.on('second-instance', (_event, argv) => {
+      if (mainWindow) {
+        if (mainWindow.isMinimized()) mainWindow.restore();
+        mainWindow.show();
+        mainWindow.focus();
+      }
+      const files = extractAudioArgs(argv);
+      if (files.length > 0) void dispatchOpenFiles(files);
+    });
+  }
 }
 let isAppQuitting = false;
 
@@ -556,14 +565,18 @@ function createWindow() {
   const appIconPath = process.platform === 'win32' && fs.existsSync(iconIcoPath) ? iconIcoPath : (fs.existsSync(iconPngPath) ? iconPngPath : null);
   const winIcon = appIconPath ? (process.platform === 'win32' ? appIconPath : nativeImage.createFromPath(appIconPath)) : icons.trayIcon;
 
+  const isAuxMode = APP_MODE !== 'player';
   mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 820,
-    minWidth: 780,
-    minHeight: 560,
+    width: isAuxMode ? 880 : 1280,
+    height: isAuxMode ? 600 : 820,
+    minWidth: isAuxMode ? 820 : 780,
+    minHeight: isAuxMode ? 540 : 560,
+    resizable: !isAuxMode,
+    maximizable: !isAuxMode,
+    center: isAuxMode,
     frame: false,
-    backgroundColor: '#000000',
-    title: 'VYBE',
+    backgroundColor: '#050508',
+    title: APP_MODE === 'setup' ? 'VYBE Setup' : APP_MODE === 'uninstall' ? 'Uninstall VYBE' : 'VYBE',
     icon: winIcon,
     webPreferences: {
       preload: path.join(__dirname, 'preload.cjs'),
@@ -585,10 +598,12 @@ function createWindow() {
   }
 
   // Security: Restrict renderer navigation to trusted application URLs
+  const devUrl = process.env.VITE_DEV_SERVER_URL;
   mainWindow.webContents.on('will-navigate', (event, navigationUrl) => {
     try {
       const parsedUrl = new URL(navigationUrl);
-      if (parsedUrl.protocol !== 'file:' && navigationUrl !== devUrl) {
+      const isTrustedDev = devUrl && navigationUrl.startsWith(devUrl);
+      if (parsedUrl.protocol !== 'file:' && !isTrustedDev) {
         event.preventDefault();
       }
     } catch {
@@ -612,19 +627,27 @@ function createWindow() {
   mainWindow.on('maximize', () => mainWindow?.webContents.send('window:maximized', true));
   mainWindow.on('unmaximize', () => mainWindow?.webContents.send('window:maximized', false));
   mainWindow.on('close', (e) => {
-    if (closeToTrayEnabled && !isAppQuitting) {
+    if (APP_MODE === 'player' && closeToTrayEnabled && !isAppQuitting) {
       e.preventDefault();
       mainWindow?.hide();
     }
   });
-  mainWindow.once('ready-to-show', () => syncDesktopMediaChrome(currentDesktopPlaying, currentDesktopTitle));
+  mainWindow.once('ready-to-show', () => {
+    if (APP_MODE === 'player') {
+      syncDesktopMediaChrome(currentDesktopPlaying, currentDesktopTitle);
+    }
+  });
 
-  const devUrl = process.env.VITE_DEV_SERVER_URL;
   if (devUrl) {
-    mainWindow.loadURL(devUrl);
+    const urlObj = new URL(devUrl);
+    if (APP_MODE !== 'player') urlObj.searchParams.set('mode', APP_MODE);
+    mainWindow.loadURL(urlObj.toString());
   } else {
     mainWindow.webContents.session.clearCache().catch(() => {});
-    mainWindow.loadFile(path.join(__dirname, '..', 'dist', 'index.html'));
+    mainWindow.loadFile(
+      path.join(__dirname, '..', 'dist', 'index.html'),
+      APP_MODE !== 'player' ? { query: { mode: APP_MODE } } : undefined
+    );
   }
 }
 
@@ -1121,7 +1144,7 @@ app.whenReady().then(() => {
     }
   });
 
-  if (!appTray) {
+  if (APP_MODE === 'player' && !appTray) {
     const iconIcoPath = path.join(__dirname, '..', 'build', 'icon.ico');
     const iconPngPath = path.join(__dirname, '..', 'build', 'icon.png');
     const trayIconPath = process.platform === 'win32' && fs.existsSync(iconIcoPath) ? iconIcoPath : (fs.existsSync(iconPngPath) ? iconPngPath : null);
@@ -1135,6 +1158,15 @@ app.whenReady().then(() => {
     });
   }
 
+  registerInstallerIPC({
+    app,
+    ipcMain,
+    dialog,
+    shell,
+    session,
+    getMainWindow: () => mainWindow
+  });
+
   session.defaultSession.setPermissionRequestHandler((_webContents, permission, callback) => {
     // Only permit desktop notifications; deny sensor/camera/microphone access
     if (permission === 'notifications') {
@@ -1145,14 +1177,16 @@ app.whenReady().then(() => {
   });
 
   createWindow();
-  syncDesktopMediaChrome(false, '');
-  if (pendingLaunchFiles.length > 0) {
-    mainWindow?.webContents.once('did-finish-load', () => {
-      setTimeout(() => {
-        void dispatchOpenFiles(pendingLaunchFiles);
-        pendingLaunchFiles = [];
-      }, 350);
-    });
+  if (APP_MODE === 'player') {
+    syncDesktopMediaChrome(false, '');
+    if (pendingLaunchFiles.length > 0) {
+      mainWindow?.webContents.once('did-finish-load', () => {
+        setTimeout(() => {
+          void dispatchOpenFiles(pendingLaunchFiles);
+          pendingLaunchFiles = [];
+        }, 350);
+      });
+    }
   }
 
   app.on('open-file', (e, filePath) => {

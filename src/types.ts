@@ -221,9 +221,51 @@ export interface NativeAudioItem {
   fileName: string;
 }
 
+export interface SetupDefaults {
+  installDir: string;
+  freeBytes: number;
+  requiredBytes: number;
+  isExistingInstall: boolean;
+  appVersion: string;
+  isPreview: boolean;
+}
+
+export interface SetupInstallOptions {
+  installDir: string;
+  desktopShortcut: boolean;
+  startMenuShortcut: boolean;
+  startWithWindows: boolean;
+}
+
+export interface SetupProgressEvent {
+  percent: number;
+  step: string;
+}
+
+export interface UninstallInfo {
+  installDir: string;
+  userDataDir: string;
+  appCoreBytes: number;
+  libraryBytes: number;
+  settingsBytes: number;
+  cacheBytes: number;
+  playlistCount: number;
+  likedCount: number;
+  customCoverCount: number;
+  trackCount: number;
+  isPreview: boolean;
+}
+
+export interface UninstallOptions {
+  removeLibrary: boolean;
+  removeSettings: boolean;
+  removeCache: boolean;
+}
+
 export interface ElectronBridgeAPI {
   isElectron: boolean;
   isDev?: boolean;
+  appMode?: 'player' | 'setup' | 'uninstall';
   platform: string;
   minimize: () => void;
   maximize: () => void;
@@ -253,6 +295,17 @@ export interface ElectronBridgeAPI {
   showNotification?: (title: string, body: string) => void;
   setZoomFactor?: (factor: number) => void;
   getZoomFactor?: () => number;
+  setupGetDefaults?: () => Promise<SetupDefaults>;
+  setupPickFolder?: (currentPath: string) => Promise<{ cancelled: boolean; path?: string; freeBytes?: number; isExistingInstall?: boolean }>;
+  setupRunInstall?: (opts: SetupInstallOptions) => Promise<{ success: boolean; targetExe?: string; error?: string }>;
+  onSetupProgress?: (cb: (ev: SetupProgressEvent) => void) => () => void;
+  setupLaunchInstalled?: (targetExe: string) => Promise<void>;
+  uninstallGetInfo?: () => Promise<UninstallInfo>;
+  uninstallExportBackup?: () => Promise<{ success: boolean; cancelled?: boolean; filePath?: string; error?: string }>;
+  uninstallClearCacheOnly?: () => Promise<{ success: boolean; freedBytes?: number; error?: string }>;
+  uninstallRun?: (opts: UninstallOptions) => Promise<{ success: boolean; error?: string }>;
+  onUninstallProgress?: (cb: (ev: SetupProgressEvent) => void) => () => void;
+  uninstallFinish?: () => Promise<void>;
 }
 
 declare global {

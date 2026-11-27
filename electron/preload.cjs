@@ -1,8 +1,23 @@
 const { contextBridge, ipcRenderer, webUtils, webFrame } = require('electron');
 
+function detectPreloadMode() {
+  if (process.argv.includes('--uninstall')) return 'uninstall';
+  if (process.argv.includes('--setup') || Boolean(process.env.PORTABLE_EXECUTABLE_FILE)) return 'setup';
+  try {
+    if (typeof window !== 'undefined' && window.location?.search) {
+      const m = new URLSearchParams(window.location.search).get('mode');
+      if (m === 'setup' || m === 'uninstall') return m;
+    }
+  } catch {
+    // ignore
+  }
+  return 'player';
+}
+
 contextBridge.exposeInMainWorld('electronAPI', {
   isElectron: true,
   isDev: Boolean(process.env.VITE_DEV_SERVER_URL),
+  appMode: detectPreloadMode(),
   platform: process.platform,
   minimize: () => ipcRenderer.send('window:minimize'),
   maximize: () => ipcRenderer.send('window:maximize'),
@@ -63,5 +78,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
   setStartOnBoot: (enabled) => ipcRenderer.send('app:setStartOnBoot', Boolean(enabled)),
   getStartOnBoot: () => ipcRenderer.invoke('app:getStartOnBoot'),
   setGlobalShortcuts: (enabled) => ipcRenderer.send('app:setGlobalShortcuts', Boolean(enabled)),
-  showNotification: (title, body) => ipcRenderer.send('app:showNotification', title, body)
+  showNotification: (title, body) => ipcRenderer.send('app:showNotification', title, body),
+  setupGetDefaults: () => ipcRenderer.invoke('setup:getDefaults'),
+  setupPickFolder: (currentPath) => ipcRenderer.invoke('setup:pickFolder', currentPath),
+  setupRunInstall: (opts) => ipcRenderer.invoke('setup:runInstall', opts),
+  onSetupProgress: (cb) => {
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('setup:progress', listener);
+    return () => ipcRenderer.removeListener('setup:progress', listener);
+  },
+  setupLaunchInstalled: (targetExe) => ipcRenderer.invoke('setup:launchInstalled', targetExe),
+  uninstallGetInfo: () => ipcRenderer.invoke('uninstall:getInfo'),
+  uninstallExportBackup: () => ipcRenderer.invoke('uninstall:exportBackup'),
+  uninstallClearCacheOnly: () => ipcRenderer.invoke('uninstall:clearCacheOnly'),
+  uninstallRun: (opts) => ipcRenderer.invoke('uninstall:run', opts),
+  onUninstallProgress: (cb) => {
+    const listener = (_event, payload) => cb(payload);
+    ipcRenderer.on('uninstall:progress', listener);
+    return () => ipcRenderer.removeListener('uninstall:progress', listener);
+  },
+  uninstallFinish: () => ipcRenderer.invoke('uninstall:finish')
 });

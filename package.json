@@ -8,6 +8,7 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "node electron/dev-runner.mjs",
+    "desktop": "node electron/dev-runner.mjs",
     "dev:web": "vite",
     "build": "tsc && vite build",
     "build:exe": "npm run build && electron-builder --win",

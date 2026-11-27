@@ -604,14 +604,14 @@ const SlideVisual: React.FC<{ slideId: string; accent: string }> = ({ slideId, a
   if (slideId === 'lyrics') {
     return (
       <div className="w-full max-w-[340px] p-6 rounded-3xl bg-gradient-to-b from-pink-500/35 via-purple-900/35 to-black/80 border border-white/25 shadow-2xl space-y-4 text-left backdrop-blur-2xl">
-        <p className="text-base font-bold text-white/40 blur-[0.6px]">मीठे मीठे हाँ...</p>
+        <p className="text-base font-bold text-white/40 blur-[0.6px]">Lost in the midnight glow...</p>
         <p
           className="text-2xl sm:text-3xl font-black text-white leading-snug tracking-tight"
           style={{ textShadow: '0 0 25px rgba(255,255,255,0.85), 0 0 50px #ec4899' }}
         >
-          जुबा है फीकी शाम से
+          Every beat feels like home
         </p>
-        <p className="text-base font-bold text-white/50 blur-[0.4px]">हुई ना तुझसे बात भी</p>
+        <p className="text-base font-bold text-white/50 blur-[0.4px]">Dancing through the stereo</p>
       </div>
     );
   }
